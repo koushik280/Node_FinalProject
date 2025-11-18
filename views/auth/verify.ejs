@@ -1,0 +1,45 @@
+
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h4 class="mb-3">Verify your email</h4>
+        <p class="text-muted small">
+          We sent a 6-digit OTP to your email. Enter it to activate your
+          account.
+        </p>
+        <% if (typeof error !== 'undefined') { %>
+        <div class="alert alert-danger"><%= error %></div>
+        <% } %>
+        <form method="POST" action="/verify" novalidate>
+          <div class="mb-3">
+            <label class="form-label">Email address</label>
+            <input
+              name="email"
+              type="email"
+              class="form-control"
+              required
+              value="<%= email || '' %>"
+            />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">OTP Code</label>
+            <input
+              name="otp"
+              inputmode="numeric"
+              pattern="\\d{6}"
+              maxlength="6"
+              class="form-control"
+              placeholder="6-digit code"
+              required
+            />
+          </div>
+          <button class="btn btn-success w-100">Verify & Continue</button>
+          <div class="text-center mt-3">
+            <small><a href="/login">Go to Login</a></small>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

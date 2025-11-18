@@ -1,0 +1,106 @@
+<% // expects: task, project, canManage (boolean), and locals.user const user =
+locals.user || {}; const assignedId = String(task.assignedTo?._id ||
+task.assignedTo || ''); const meId = String(user.id || ''); const canAdd =
+!!meId && (canManage || assignedId === meId); const atts =
+Array.isArray(task.attachments) ? task.attachments : []; const isImg = (t)=>
+/^image\//.test(t || ''); %>
+
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span class="fw-semibold">Attachments</span>
+    <span class="badge bg-light text-body border"><%= atts.length %></span>
+  </div>
+
+  <div class="card-body">
+    <% if (canAdd) { %>
+    <!-- Single-file upload -->
+    <form
+      class="mb-3"
+      action="/tasks/<%= task._id %>/attachments"
+      method="POST"
+      enctype="multipart/form-data"
+    >
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <input
+          type="file"
+          name="file"
+          class="form-control form-control-sm"
+          required
+        />
+        <button class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-cloud-upload me-1"></i> Upload
+        </button>
+        <small class="text-muted"
+          >Images, PDF, DOC, ZIP allowed (per your server config).</small
+        >
+      </div>
+    </form>
+    <hr class="my-3" />
+    <% } %> <% if (!atts.length) { %>
+    <div class="text-muted">No attachments yet.</div>
+    <% } else { %>
+    <div class="row g-3">
+      <% atts.forEach(a => { %>
+      <div class="col-12 col-sm-6 col-lg-4">
+        <div class="card h-100 shadow-sm">
+          <% if (isImg(a.type)) { %>
+          <a href="<%= a.url %>" target="_blank">
+            <img
+              src="<%= a.url %>"
+              class="card-img-top"
+              style="height: 180px; object-fit: cover"
+              alt="<%= a.name %>"
+            />
+          </a>
+          <% } else { %>
+          <div
+            class="card-img-top d-flex align-items-center justify-content-center bg-light"
+            style="height: 180px"
+          >
+            <i class="bi bi-file-earmark-text" style="font-size: 2rem"></i>
+          </div>
+          <% } %>
+
+          <div class="card-body d-flex flex-column">
+            <div class="small text-truncate" title="<%= a.name %>">
+              <strong><%= a.name || 'file' %></strong>
+            </div>
+            <div class="text-muted small mb-2">
+              <%= (a.type || '').split('/')[1] || a.type || '' %> · <%= a.size ?
+              Math.ceil(a.size/1024) + ' KB' : '' %>
+            </div>
+
+            <div class="mt-auto d-flex gap-2">
+              <a
+                class="btn btn-sm btn-outline-secondary"
+                href="<%= a.url %>"
+                target="_blank"
+              >
+                <i class="bi bi-box-arrow-up-right me-1"></i> View
+              </a>
+
+              <% if (canAdd) { %>
+              <form
+                method="POST"
+                action="/tasks/<%= task._id %>/attachments/delete"
+                onsubmit="return confirm('Remove this attachment?')"
+              >
+                <input
+                  type="hidden"
+                  name="publicId"
+                  value="<%= a.publicId %>"
+                />
+                <button class="btn btn-sm btn-outline-danger">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+    <% } %>
+  </div>
+</div>

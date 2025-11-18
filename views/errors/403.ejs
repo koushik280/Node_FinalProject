@@ -1,0 +1,25 @@
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center bg-white p-5 rounded shadow-sm">
+            
+            <h1 class="display-1 text-danger">403</h1>
+            <h2 class="mb-4">Access Denied: Forbidden</h2>
+            <hr class="my-4">
+            
+            <% if (typeof message !== 'undefined') { %>
+                <div class="alert alert-warning" role="alert">
+                    <p class="lead mb-0"><%= message %></p>
+                </div>
+            <% } else { %>
+                <div class="alert alert-warning" role="alert">
+                    <p class="lead mb-0">You do not have the necessary permission to view this resource.</p>
+                </div>
+            <% } %>
+            
+            <p class="mt-4">
+                <a href="/dashboard" class="btn btn-primary me-2">Go to Dashboard</a>
+                <a href="javascript:history.back()" class="btn btn-outline-secondary">Go Back</a>
+            </p>
+        </div>
+    </div>
+</div>

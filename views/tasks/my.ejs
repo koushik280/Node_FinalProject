@@ -1,0 +1,129 @@
+<%
+  const user   = locals.user || {};
+  const prettyDate = d => d ? new Date(d).toLocaleDateString() : '-';
+
+  // badge helper
+  const statusClasses = s => {
+    if (s === 'Completed')  return 'bg-success-subtle text-success border-success';
+    if (s === 'In Progress')return 'bg-primary-subtle text-primary border-primary';
+    return 'bg-secondary-subtle text-secondary border-secondary';
+  };
+
+  // unique project ids for socket rooms
+  const projectRooms = [...new Set((tasks||[]).map(t => String(t.projectId)))];
+%>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4>My Tasks</h4>
+</div>
+
+<!-- Mini CSS just for card layout -->
+<style>
+  .task-grid { display:grid; gap:1rem; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .task-card .title { font-weight:600; }
+  .task-card .desc { font-size:.9rem; color:#6c757d; }
+  .task-card .meta .badge { margin-right:.35rem; }
+  .status-actions { position:absolute; top:.5rem; right:.5rem; }
+  .status-actions .btn { padding:.15rem .45rem; font-size:.75rem; }
+</style>
+
+<style>
+  .task-card { cursor: pointer; transition: transform .06s ease, box-shadow .06s ease; }
+  .task-card:hover { transform: translateY(-1px); box-shadow: 0 .35rem .9rem rgba(0,0,0,.08); }
+</style>
+
+<% if (Array.isArray(tasks) && tasks.length) { %>
+  <div class="task-grid">
+  <% tasks.forEach(t => { %>
+    <div class="card shadow-sm task-card"
+         data-task="<%= t._id %>"
+         data-project="<%= t.projectId %>"
+         data-href="/tasks/<%= t._id %>">
+      <div class="card-body position-relative">
+
+        <!-- top-right status action buttons -->
+        <form class="status-actions btn-group" method="POST" action="/tasks/<%= t._id %>/status" onclick="event.stopPropagation()">
+          <input type="hidden" name="projectId" value="<%= t.projectId %>"/>
+          <button class="btn btn-outline-dark"    name="status" value="Pending"       title="Mark Pending">P</button>
+          <button class="btn btn-outline-primary" name="status" value="In Progress"   title="Mark In Progress">IP</button>
+          <button class="btn btn-outline-success" name="status" value="Completed"     title="Mark Completed">C</button>
+        </form>
+
+        <!-- title becomes a link, but the whole card is also clickable -->
+        <div class="title mb-1">
+          <a href="/tasks/<%= t._id %>" class="text-decoration-none"><%= t.title %></a>
+        </div>
+
+        <% if (t.description) { %>
+          <div class="desc mb-2"><%= t.description %></div>
+        <% } %>
+
+        <div class="meta mb-2">
+          <span class="badge rounded-pill bg-light border text-body small">
+            <i class="bi bi-kanban me-1"></i><%= t.projectName || t.projectId %>
+          </span>
+          <span class="badge rounded-pill bg-light border text-body small">
+            <i class="bi bi-flag me-1"></i><%= t.priority %>
+          </span>
+          <span class="badge rounded-pill bg-light border text-body small">
+            <i class="bi bi-calendar-event me-1"></i><%= prettyDate(t.dueDate) %>
+          </span>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge rounded-pill border <%= statusClasses(t.status) %>" data-task-status>
+            <%= t.status %>
+          </span>
+
+          <!-- explicit View button -->
+          <a href="/tasks/<%= t._id %>" class="btn btn-sm btn-outline-dark ms-auto" onclick="event.stopPropagation()">
+            <i class="bi bi-search"></i> View
+          </a>
+        </div>
+      </div>
+    </div>
+  <% }) %>
+</div>
+
+<% } else { %>
+  <div class="alert alert-light border text-muted">No tasks assigned to you.</div>
+<% } %>
+
+<!-- Socket.io for live badge updates -->
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  (function () {
+    if (typeof io === 'undefined') return;
+    const socket = io({ withCredentials: true });
+
+    const rooms = <%- JSON.stringify(projectRooms) %>;
+    rooms.forEach(id => socket.emit('join', `project:${id}`));
+
+    socket.on('task:status_changed', (e) => {
+      const row = document.querySelector(`[data-task="${e.taskId}"]`);
+      if (!row) return;
+      const badge = row.querySelector('[data-task-status]');
+      if (!badge) return;
+
+      badge.textContent = e.status;
+      // reset classes
+      badge.classList.remove('bg-success-subtle','text-success','border-success',
+                             'bg-primary-subtle','text-primary','border-primary',
+                             'bg-secondary-subtle','text-secondary','border-secondary');
+      if (e.status === 'Completed')      badge.classList.add('bg-success-subtle','text-success','border-success');
+      else if (e.status === 'In Progress') badge.classList.add('bg-primary-subtle','text-primary','border-primary');
+      else                                badge.classList.add('bg-secondary-subtle','text-secondary','border-secondary');
+    });
+  })();
+</script>
+<script>
+  // make the whole card clickable but ignore clicks on buttons/forms/links/inputs
+  document.querySelectorAll('.task-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      const t = e.target;
+      if (t.closest('a,button,input,select,textarea,form,[role="button"]')) return;
+      const href = card.getAttribute('data-href');
+      if (href) window.location.href = href;
+    });
+  });
+</script>

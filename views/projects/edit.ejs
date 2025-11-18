@@ -1,0 +1,23 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">Edit Project</h4>
+  <a href="/projects/<%= project._id %>" class="btn btn-outline-secondary btn-sm">Back</a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="POST" action="/projects/<%= project._id %>/edit" class="vstack gap-3">
+      <div>
+        <label class="form-label">Project Name</label>
+        <input name="name" class="form-control" required maxlength="120" value="<%= (form?.name ?? project.name) %>">
+      </div>
+      <div>
+        <label class="form-label">Description</label>
+        <textarea name="description" rows="4" class="form-control"><%= (form?.description ?? project.description) || '' %></textarea>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary">Save Changes</button>
+        <a class="btn btn-outline-secondary" href="/projects/<%= project._id %>">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>

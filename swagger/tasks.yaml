@@ -1,0 +1,324 @@
+paths:
+  /tasks:
+    post:
+      tags: [Tasks]
+      summary: Create task in a project
+      description: Create a new task inside a project. Allowed for managers, admins and superadmins (RBAC enforced server-side).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, projectId]
+              properties:
+                title:
+                  type: string
+                  example: "Implement login"
+                description:
+                  type: string
+                projectId:
+                  type: string
+                  description: "Project _id"
+                priority:
+                  type: string
+                  enum: [Low, Medium, High, Critical]
+                dueDate:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Task created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: "Task created" }
+                  data:
+                    $ref: './components.yaml#/components/schemas/Task'
+        '400':
+          $ref: './components.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './components.yaml#/components/schemas/Error'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/Error'
+
+  /tasks/my:
+    get:
+      tags: [Tasks]
+      summary: Get tasks assigned to current user
+      description: Return tasks assigned to the authenticated user, sorted by due date.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of tasks assigned to user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  data:
+                    type: array
+                    items:
+                      $ref: './components.yaml#/components/schemas/Task'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+
+  /tasks/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags: [Tasks]
+      summary: Get task by id
+      description: Retrieve a single task. Visibility is enforced (assignee, project members, managers, owner, admin, superadmin).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      title: { type: string }
+                      description: { type: string }
+                      status: { type: string }
+                      priority: { type: string }
+                      dueDate:
+                        type: string
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                      assignedTo:
+                        type: object
+                        nullable: true
+                      createdBy:
+                        type: object
+                      project:
+                        type: object
+                        properties:
+                          id: { type: string }
+                          name: { type: string }
+        '403':
+          $ref: './components.yaml#/components/schemas/Error'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+
+    put:
+      tags: [Tasks]
+      summary: Update task fields
+      description: Update task metadata (title, description, priority, dueDate). Allowed for creator or project managers/admins.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                priority:
+                  type: string
+                  enum: [Low, Medium, High, Critical]
+                dueDate:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: "Task updated" }
+                  data:
+                    $ref: './components.yaml#/components/schemas/Task'
+        '400':
+          $ref: './components.yaml#/components/responses/BadRequest'
+        '403':
+          $ref: './components.yaml#/components/schemas/Error'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+
+    delete:
+      tags: [Tasks]
+      summary: Delete a task
+      description: Delete a task. Allowed for creator or project managers/admins.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Task deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: "Task deleted" }
+        '403':
+          $ref: './components.yaml#/components/schemas/Error'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+
+  /tasks/{id}/assign:
+    put:
+      tags: [Tasks]
+      summary: Assign a task to a project member
+      description: Assign the task to a user who is a manager or employee and a member of the project. Only manager/admin/sa/owner allowed (RBAC enforced).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId:
+                  type: string
+                  description: "User _id to assign the task to"
+      responses:
+        '200':
+          description: Task assigned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: "Task assigned" }
+                  data:
+                    $ref: './components.yaml#/components/schemas/Task'
+        '400':
+          $ref: './components.yaml#/components/responses/BadRequest'
+        '403':
+          $ref: './components.yaml#/components/schemas/Error'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+
+  /tasks/{id}/status:
+    put:
+      tags: [Tasks]
+      summary: Update task status
+      description: Update the status of a task. Assignee may always update. Project managers/owners may update unless they are high-level admins (per business rules).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  description: "One of: Pending, In Progress, Completed (case-insensitive accepted)"
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: "Status updated" }
+                  data:
+                    $ref: './components.yaml#/components/schemas/Task'
+        '400':
+          $ref: './components.yaml#/components/responses/BadRequest'
+        '403':
+          $ref: './components.yaml#/components/schemas/Error'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+
+  /tasks/project/{id}:
+    get:
+      tags: [Tasks]
+      summary: List tasks by project
+      description: Return tasks for a project. Visible to superadmin, owner, managers and members.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Project _id
+      responses:
+        '200':
+          description: Tasks for project
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  data:
+                    type: object
+                    properties:
+                      projectId:
+                        type: string
+                      tasks:
+                        type: array
+                        items:
+                          $ref: './components.yaml#/components/schemas/Task'
+        '403':
+          $ref: './components.yaml#/components/schemas/Error'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'

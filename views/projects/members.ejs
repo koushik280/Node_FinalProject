@@ -1,0 +1,68 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4>Members – <span class="text-muted"><%= project.name %></span></h4>
+  <a class="btn btn-outline-secondary" href="/projects">Back</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h6 class="mb-3">Managers</h6>
+        <form class="row g-2 mb-3" method="POST" action="/projects/<%= project._id %>/members/add-manager">
+          <div class="col">
+            <input class="form-control" name="email" type="email" placeholder="user@example.com" required>
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-primary">Add</button>
+          </div>
+        </form>
+        <ul class="list-group">
+          <% (project.managers || []).forEach(m => { %>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span><%= m.name %> <span class="text-muted small">(<%= m.email %>)</span></span>
+              <form method="POST" action="/projects/<%= project._id %>/members/remove" onsubmit="return confirm('Remove manager?')">
+                <input type="hidden" name="type" value="manager">
+                <input type="hidden" name="userId" value="<%= m._id %>">
+                <button class="btn btn-sm btn-outline-danger">Remove</button>
+              </form>
+            </li>
+          <% }) %>
+          <% if (!project.managers || !project.managers.length) { %>
+            <li class="list-group-item text-muted small">No managers yet.</li>
+          <% } %>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h6 class="mb-3">Members</h6>
+        <form class="row g-2 mb-3" method="POST" action="/projects/<%= project._id %>/members/add-member">
+          <div class="col">
+            <input class="form-control" name="email" type="email" placeholder="user@example.com" required>
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-primary">Add</button>
+          </div>
+        </form>
+        <ul class="list-group">
+          <% (project.members || []).forEach(m => { %>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span><%= m.name %> <span class="text-muted small">(<%= m.email %>)</span></span>
+              <form method="POST" action="/projects/<%= project._id %>/members/remove" onsubmit="return confirm('Remove member?')">
+                <input type="hidden" name="type" value="member">
+                <input type="hidden" name="userId" value="<%= m._id %>">
+                <button class="btn btn-sm btn-outline-danger">Remove</button>
+              </form>
+            </li>
+          <% }) %>
+          <% if (!project.members || !project.members.length) { %>
+            <li class="list-group-item text-muted small">No members yet.</li>
+          <% } %>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,70 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="mb-0"><%= project.name %></h4>
+    <div class="text-muted small">Owner: <%= project.owner?.name %> (<%= project.owner?.email %>)</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="/projects/<%= project._id %>/tasks" class="btn btn-outline-primary btn-sm">Tasks</a>
+    <a href="/projects/<%= project._id %>/members" class="btn btn-outline-secondary btn-sm">Members</a>
+    <% if (locals.user && ['superadmin','admin'].includes(locals.user.role)) { %>
+      <a href="/projects/<%= project._id %>/edit" class="btn btn-info btn-sm">Edit</a>
+      <form method="POST" action="/projects/<%= project._id %>/delete" onsubmit="return confirm('Delete this project?');">
+        <button class="btn btn-outline-danger btn-sm">Delete</button>
+      </form>
+    <% } %>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="fw-semibold mb-2">Description</div>
+        <div class="text-muted"><%= project.description || 'No description' %></div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="fw-semibold mb-2">Quick Links</div>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="/projects/<%= project._id %>/tasks" class="btn btn-sm btn-outline-primary">Open Tasks</a>
+          <a href="/projects/<%= project._id %>/add_members" class="btn btn-sm btn-outline-secondary">Manage Members</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="fw-semibold mb-2">Summary</div>
+        <div class="small text-muted">Managers: <span class="fw-semibold"><%= counts.managers %></span></div>
+        <div class="small text-muted">Members: <span class="fw-semibold"><%= counts.members %></span></div>
+        <div class="small text-muted">Created: <%= new Date(project.createdAt).toLocaleString() %></div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="fw-semibold mb-2">People</div>
+        <div class="small mb-2">
+          <div class="text-muted">Managers</div>
+          <ul class="mb-2">
+            <% (project.managers || []).forEach(m => { %>
+              <li><%= m.name %> — <span class="text-muted"><%= m.email %></span></li>
+            <% }) %>
+            <% if (!(project.managers||[]).length) { %><li class="text-muted">None</li><% } %>
+          </ul>
+          <div class="text-muted">Members</div>
+          <ul class="mb-0">
+            <% (project.members || []).forEach(m => { %>
+              <li><%= m.name %> — <span class="text-muted"><%= m.email %></span></li>
+            <% }) %>
+            <% if (!(project.members||[]).length) { %><li class="text-muted">None</li><% } %>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

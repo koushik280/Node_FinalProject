@@ -1,0 +1,81 @@
+paths:
+  /activity/recent:
+    get:
+      tags: [Activity]
+      summary: Recent activity log entries
+      description: >
+        Return recent activity log entries. Optionally filter by `projectId`.
+        Results are sorted by `createdAt` descending. Pagination is simple via `limit`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: projectId
+          required: false
+          schema:
+            type: string
+          description: Optional project _id to filter activity for a specific project
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 200
+          description: Maximum number of entries to return (default 10)
+      responses:
+        "200":
+          description: Recent activity items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        userId:
+                          type: object
+                          nullable: true
+                          description: Populated user reference (name + email)
+                          properties:
+                            _id:
+                              type: string
+                            name:
+                              type: string
+                            email:
+                              type: string
+                        action:
+                          type: string
+                          example: "task.status_changed"
+                        entity:
+                          type: string
+                          example: "Task"
+                        entityId:
+                          type: string
+                        projectId:
+                          type: string
+                        metadata:
+                          type: object
+                          nullable: true
+                        createdAt:
+                          type: string
+                          format: date-time
+        "400":
+          $ref: "./components.yaml#/components/responses/BadRequest"
+        "401":
+          $ref: "./components.yaml#/components/responses/Unauthorized"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "./components.yaml#/components/schemas/Error"

@@ -1,0 +1,61 @@
+<div class="container my-4">
+    <div class="card shadow-sm">
+        
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h2 class="h4 mb-0">Edit Task: <%= task.title %></h2>
+            <a href="/tasks/<%= task._id %>" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-lg"></i> Cancel
+            </a>
+        </div>
+
+        <div class="card-body">
+            <p class="text-muted small">
+                In project: <a href="/projects/<%= project._id %>/tasks"><%= project.name %></a>
+            </p>
+
+            <form action="/tasks/<%= task._id %>/update" method="POST" class="needs-validation" novalidate>
+                <input type="hidden" name="projectId" value="<%= project._id %>">
+
+                <div class="mb-3">
+                    <label for="title" class="form-label fw-semibold">Title</label>
+                    <input type="text" class="form-control" id="title" name="title" value="<%= task.title %>" required maxlength="120">
+                    <div class="invalid-feedback">Please enter a title.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label fw-semibold">Description</label>
+                    <textarea class="form-control" id="description" name="description" rows="3"><%= task.description %></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="priority" class="form-label fw-semibold">Priority</label>
+                        <select class="form-select" id="priority" name="priority" required>
+                            <% ['Low', 'Medium', 'High', 'Critical'].forEach(p => { %>
+                                <option value="<%= p %>" <%= task.priority === p ? 'selected' : '' %>><%= p %></option>
+                            <% }) %>
+                        </select>
+                        <div class="invalid-feedback">Please select a priority.</div>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="dueDate" class="form-label fw-semibold">Due Date</label>
+                        <% 
+                            const dateValue = task.dueDate ? new Date(task.dueDate).toISOString().substring(0, 10) : ''; 
+                        %>
+                        <input type="date" class="form-control" id="dueDate" name="dueDate" value="<%= dateValue %>">
+                    </div>
+                </div>
+                
+                <hr>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="/tasks/<%= task._id %>" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

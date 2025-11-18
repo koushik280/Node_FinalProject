@@ -1,0 +1,95 @@
+<%
+  // expects: task, project, canManage (boolean), and locals.user
+  const user = locals.user || {};
+  const assignedId = String(task.assignedTo?._id || task.assignedTo || '');
+  const meId = String(user.id || '');
+  const canPost = !!meId && (canManage || assignedId === meId);
+
+  const comments = Array.isArray(task.comments) ? task.comments : [];
+  const fmt = (d)=> d ? new Date(d).toLocaleString() : '';
+  const isImg = (t)=> /^image\//.test(t || '');
+%>
+
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span class="fw-semibold">Comments</span>
+    <span class="badge bg-light text-body border"><%= comments.length %></span>
+  </div>
+
+  <div class="card-body">
+    <% if (canPost) { %>
+      <!-- Add comment (text + optional files[]) -->
+      <form class="mb-3" action="/tasks/<%= task._id %>/comments" method="POST" enctype="multipart/form-data">
+        <div class="mb-2">
+          <textarea name="text" class="form-control" rows="2" placeholder="Write a comment..." maxlength="2000"></textarea>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <label class="btn btn-sm btn-outline-secondary mb-0">
+            <i class="bi bi-paperclip me-1"></i> Attach files
+            <input type="file" name="files" multiple class="d-none" />
+          </label>
+          <button class="btn btn-sm btn-primary">
+            <i class="bi bi-send me-1"></i> Post
+          </button>
+          <small class="text-muted">Images/PDF/ZIP/DOC supported (up to your server limits).</small>
+        </div>
+      </form>
+      <hr class="my-3">
+    <% } %>
+
+    <% if (!comments.length) { %>
+      <div class="text-muted">No comments yet.</div>
+    <% } else { %>
+      <div class="vstack gap-3">
+        <% comments.forEach(c => { %>
+          <div class="d-flex gap-2">
+            <div class="flex-shrink-0">
+              <div class="rounded-circle bg-light border d-inline-flex align-items-center justify-content-center" style="width:38px;height:38px;">
+                <i class="bi bi-chat-left-text"></i>
+              </div>
+            </div>
+
+            <div class="flex-grow-1">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="small">
+                  <strong><%= c.by?.name || c.by?.email || 'User' %></strong>
+                  <span class="text-muted">· <%= fmt(c.createdAt || c._id?.getTimestamp?.()) %></span>
+                </div>
+
+                <% const isAuthor = String(c.by?._id || c.by) === String(user.id); %>
+                <% if (isAuthor || canManage) { %>
+                  <form method="POST" action="/tasks/<%= task._id %>/comments/<%= c._id %>/delete" onsubmit="return confirm('Delete this comment?')">
+                    <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                  </form>
+                <% } %>
+              </div>
+
+              <% if (c.text) { %>
+                <div class="mt-1"><%= c.text %></div>
+              <% } %>
+
+              <% if (Array.isArray(c.files) && c.files.length) { %>
+                <div class="row g-2 mt-2">
+                  <% c.files.forEach(f => { %>
+                    <div class="col-auto">
+                      <% if (isImg(f.type)) { %>
+                        <a href="<%= f.url %>" target="_blank" class="d-inline-block">
+                          <img src="<%= f.url %>" alt="<%= f.name %>" class="rounded border" style="width:96px;height:96px;object-fit:cover;">
+                        </a>
+                      <% } else { %>
+                        <a href="<%= f.url %>" target="_blank" class="btn btn-sm btn-outline-secondary">
+                          <i class="bi bi-file-earmark-text me-1"></i> <%= f.name || 'file' %>
+                        </a>
+                      <% } %>
+                    </div>
+                  <% }) %>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+</div>

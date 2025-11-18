@@ -1,0 +1,89 @@
+<div class="container py-4">
+  <!-- Project Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold mb-0">
+      <i class="bi bi-people-fill me-2"></i> Members of <%= project.name %>
+    </h3>
+    <a href="/projects" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i> Back to Projects
+    </a>
+  </div>
+
+  <!-- Managers Section -->
+  <div class="card mb-4 shadow-sm border-0">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">
+        <i class="bi bi-person-badge me-2"></i> Project Managers
+      </h5>
+    </div>
+    <div class="list-group list-group-flush">
+      <% if (managers && managers.length) { %>
+        <% managers.forEach(m => { %>
+          <div class="list-group-item d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <% if (m.avatar) { %>
+                <img src="<%= m.avatar.url %>" alt="avatar"
+                     class="rounded-circle me-3" width="45" height="45">
+              <% } else { %>
+                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-3"
+                     style="width:45px;height:45px;">
+                  <i class="bi bi-person"></i>
+                </div>
+              <% } %>
+              <div>
+                <div class="fw-semibold"><%= m.name %></div>
+                <div class="text-muted small"><%= m.email %></div>
+              </div>
+            </div>
+            <span class="badge bg-info">
+              <%= m.role?.name || 'Manager' %>
+            </span>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="list-group-item text-muted fst-italic">
+          No managers assigned yet.
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Members Section -->
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0">
+        <i class="bi bi-people me-2"></i> Team Members
+      </h5>
+    </div>
+    <div class="list-group list-group-flush">
+      <% if (members && members.length) { %>
+        <% members.forEach(m => { %>
+          <div class="list-group-item d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <% if (m.avatar) { %>
+                <img src="<%= m.avatar.url %>" alt="avatar"
+                     class="rounded-circle me-3" width="45" height="45">
+              <% } else { %>
+                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-3"
+                     style="width:45px;height:45px;">
+                  <i class="bi bi-person"></i>
+                </div>
+              <% } %>
+              <div>
+                <div class="fw-semibold"><%= m.name %></div>
+                <div class="text-muted small"><%= m.email %></div>
+              </div>
+            </div>
+            <span class="badge bg-light text-dark">
+              <%= m.role?.name || 'Employee' %>
+            </span>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="list-group-item text-muted fst-italic">
+          No members added yet.
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,130 @@
+<%
+// expects: { task, project, canManage, meId }
+const prettyDate = d => d ? new Date(d).toLocaleDateString() : '-';
+const statusClasses = s => {
+  if (s === 'Completed')   return 'bg-success-subtle text-success border-success';
+  if (s === 'In Progress') return 'bg-primary-subtle text-primary border-primary';
+  return 'bg-secondary-subtle text-secondary border-secondary';
+};
+%>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="mb-1"><%= task.title %></h4>
+    <div class="text-muted small">
+      In project:
+      <a href="/projects/<%= project._id %>"><%= project.name %></a>
+    </div>
+  </div>
+  <div>
+    <% if (canManage || String(task.createdBy._id) === meId) { %>
+      <a href="/tasks/<%= task._id %>/edit" class="btn btn-sm btn-info">
+        <i class="bi bi-pencil-square"></i> Edit Task
+      </a>
+    <% } %>
+    <a class="btn btn-outline-secondary" href="/projects/<%= project._id %>/tasks">
+      <i class="bi bi-arrow-left-short"></i> Back to Tasks
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <% if (task.description) { %>
+          <p class="mb-3"><%= task.description %></p>
+        <% } else { %>
+          <p class="text-muted">No description.</p>
+        <% } %>
+
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <span class="badge rounded-pill bg-light border text-body">
+            <i class="bi bi-flag me-1"></i> <%= task.priority %>
+          </span>
+          <span class="badge rounded-pill bg-light border text-body">
+            <i class="bi bi-calendar-event me-1"></i> Due: <%= prettyDate(task.dueDate) %>
+          </span>
+          <span class="badge rounded-pill border <%= statusClasses(task.status) %>" data-task-status>
+            <%= task.status %>
+          </span>
+          <% if (task.assignedTo) { %>
+            <span class="badge rounded-pill bg-light border text-body">
+              <i class="bi bi-person-badge me-1"></i>
+              Assigned to: <%= task.assignedTo.name || task.assignedTo.email %>
+            </span>
+          <% } %>
+        </div>
+
+        <!-- Status quick actions -->
+        <% const canUpdate = (String(task.assignedTo?._id||'') === String(meId)) || canManage; %>
+        <% if (canUpdate) { %>
+          <form class="btn-group" method="POST" action="/tasks/<%= task._id %>/status">
+            <input type="hidden" name="projectId" value="<%= project._id %>"/>
+            <button class="btn btn-outline-dark"    name="status" value="Pending">Pending</button>
+            <button class="btn btn-outline-primary" name="status" value="In Progress">In&nbsp;Progress</button>
+            <button class="btn btn-outline-success" name="status" value="Completed">Completed</button>
+          </form>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Comments -->
+    <div class="mt-3">
+      <%- include('../partials/task-comments', { task, project, canManage }) %>
+    </div>
+
+    <!-- Attachments -->
+    <div class="mt-3">
+      <%- include('../partials/task-attachments', { task, project, canManage }) %>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white fw-semibold">Task Info</div>
+      <div class="card-body small">
+        <div class="mb-2"><span class="text-muted">Created:</span> <%= new Date(task.createdAt).toLocaleString() %></div>
+        <% if (task.createdBy) { %>
+          <div class="mb-2"><span class="text-muted">Created by:</span> <%= task.createdBy.name || task.createdBy.email || task.createdBy %></div>
+        <% } %>
+        <div class="mb-2"><span class="text-muted">Task ID:</span> <code><%= task._id %></code></div>
+        <div class="mb-2"><span class="text-muted">Project ID:</span> <code><%= project._id %></code></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Live updates for this task via Socket.io -->
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  (function(){
+    if (typeof io === 'undefined') return;
+    const socket = io({ withCredentials: true });
+    socket.emit('join', 'project:<%= project._id %>');
+
+    socket.on('task:status_changed', (e) => {
+      if (e.taskId !== '<%= task._id %>') return;
+      const badge = document.querySelector('[data-task-status]');
+      if (!badge) return;
+      badge.textContent = e.status;
+
+      badge.classList.remove('bg-success-subtle','text-success','border-success',
+                             'bg-primary-subtle','text-primary','border-primary',
+                             'bg-secondary-subtle','text-secondary','border-secondary');
+      if (e.status === 'Completed')      badge.classList.add('bg-success-subtle','text-success','border-success');
+      else if (e.status === 'In Progress') badge.classList.add('bg-primary-subtle','text-primary','border-primary');
+      else                                 badge.classList.add('bg-secondary-subtle','text-secondary','border-secondary');
+    });
+
+    socket.on('task:comment_added', (e) => {
+      if (e.taskId !== '<%= task._id %>') return;
+      // You can optionally append the comment without reload (left simple for now).
+    });
+
+    socket.on('task:attachment_added', (e) => {
+      if (e.taskId !== '<%= task._id %>') return;
+      // Optionally append the attachment row (left simple).
+    });
+  })();
+</script>

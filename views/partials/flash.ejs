@@ -1,0 +1,15 @@
+<% if (flash &&
+(flash.success.length||flash.error.length||flash.info.length||flash.warn.length))
+{ %>
+<div class="position-relative" style="z-index: 1">
+  <% flash.success.forEach(m => { %>
+  <div class="alert alert-success"><%= m %></div>
+  <% }) %> <% flash.error.forEach(m => { %>
+  <div class="alert alert-danger"><%= m %></div>
+  <% }) %> <% flash.info.forEach(m => { %>
+  <div class="alert alert-info"><%= m %></div>
+  <% }) %> <% flash.warn.forEach(m => { %>
+  <div class="alert alert-warning"><%= m %></div>
+  <% }) %>
+</div>
+<% } %>

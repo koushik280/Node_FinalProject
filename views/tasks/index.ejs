@@ -1,0 +1,235 @@
+<%
+  // ---------- Helpers ----------
+  const user   = locals.user || {};
+  const myRole = user.role || 'employee';
+  const myId   = user.id || '';
+
+  // Who can create/assign/manage tasks
+  const canManage = ['superadmin','admin','manager'].includes(myRole);
+
+  // Build assignment list (expect managers/members populated with name + role)
+  const managers   = Array.isArray(project.managers) ? project.managers : [];
+  const members    = Array.isArray(project.members)  ? project.members  : [];
+  const assignees  = [...managers, ...members];
+
+  // Quick helpers
+  const sameId = (a, b) => String(a || '') === String(b || '');
+  const findUserName = (uid) => {
+    const u = assignees.find(x => sameId(x._id, uid));
+    return u ? `${u.name}${u.role?.name ? ' ('+u.role.name+')' : ''}` : '';
+  };
+%>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4>Tasks – <span class="text-muted"><%= project.name %></span></h4>
+  <a class="btn btn-outline-secondary" href="/projects">Back to Projects</a>
+</div>
+
+<% if (canManage) { %>
+  <div class="card mb-3 shadow-sm">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0">Create Task</h6>
+        <% if (!assignees.length) { %>
+          <span class="form-hint">Tip: add members/managers to enable assignment</span>
+        <% } %>
+      </div>
+
+      <form method="POST" action="/projects/<%= project._id %>/tasks/create">
+        <div class="row g-2">
+          <div class="col-lg-6">
+            <label class="form-label small">Title</label>
+            <input name="title" class="form-control form-control-compact" required maxlength="120" />
+          </div>
+
+          <div class="col-6 col-lg-3">
+            <label class="form-label small">Priority</label>
+            <select name="priority" class="form-select form-select-compact">
+              <option>Low</option>
+              <option selected>Medium</option>
+              <option>High</option>
+              <option>Critical</option>
+            </select>
+          </div>
+
+          <div class="col-6 col-lg-3">
+            <label class="form-label small">Due Date</label>
+            <input name="dueDate" type="date" class="form-control form-control-compact" />
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small">Description <span class="text-muted">(optional)</span></label>
+            <textarea name="description" rows="2" class="form-control form-control-compact" placeholder="Short description"></textarea>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-3">
+          <button class="btn btn-primary btn-compact">
+            <i class="bi bi-plus-lg me-1"></i>Create Task
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+<% } %>
+
+<div class="table-responsive bg-white shadow-sm rounded p-2">
+  <table class="table table-sm align-middle" id="tasksTbl" data-dt>
+    <thead>
+      <tr>
+        <th style="width:34%">Title</th>
+        <th style="width:22%">Assignee</th>
+        <th style="width:18%">Status</th>
+        <th style="width:10%">Priority</th>
+        <th style="width:10%">Due</th>
+        <th style="width:6%" class="text-end">Actions</th>
+      </tr>
+    </thead>
+
+    <tbody>
+    <% if (Array.isArray(tasks) && tasks.length) { %>
+      <% tasks.forEach(t => {
+           const isMine = t.assignedTo && sameId(t.assignedTo, myId);
+           const assigneeName = t.assignedTo ? (findUserName(t.assignedTo) || 'Assigned') : 'Unassigned';
+           const statusClass = t.status==='Completed' ? 'bg-success-subtle text-success border-success'
+                            : t.status==='In Progress' ? 'bg-primary-subtle text-primary border-primary'
+                            : 'bg-secondary-subtle text-secondary border-secondary';
+      %>
+
+        <!-- ✅ Added real-time update selector -->
+        <tr data-task="<%= t._id %>">
+
+          <!-- Title + description -->
+          <td>
+  <a href="/tasks/<%= t._id %>" class="fw-semibold text-decoration-none"><%= t.title %></a>
+  <% if (t.description) { %>
+    <div class="text-muted small text-truncate-2"><%= t.description %></div>
+  <% } %>
+</td>
+
+
+          <!-- Assignee -->
+          <td>
+            <% if (t.assignedTo) { %>
+              <span class="badge rounded-pill bg-light border text-body small">
+                <i class="bi bi-person-badge me-1"></i><%= assigneeName %>
+              </span>
+            <% } else { %>
+              <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning small">Unassigned</span>
+            <% } %>
+
+            <% if (canManage) { %>
+              <form class="d-flex align-items-center gap-2 mt-2" method="POST" action="/tasks/<%= t._id %>/assign">
+                <input type="hidden" name="projectId" value="<%= project._id %>"/>
+                <select name="userId" class="form-select form-select-sm w-auto" style="min-width: 220px"
+                        <%= assignees.length ? '' : 'disabled' %> required>
+                  <option value=""><%= assignees.length ? 'Select member' : 'No members in project' %></option>
+                  <% assignees.forEach(u => { %>
+                    <option value="<%= u._id %>" <%= (t.assignedTo && sameId(t.assignedTo, u._id)) ? 'selected' : '' %>>
+                      <%= u.name %> <%= u.role?.name ? '('+u.role.name+')' : '' %>
+                    </option>
+                  <% }) %>
+                </select>
+                <button class="btn btn-sm btn-outline-primary" <%= assignees.length ? '' : 'disabled' %>>Assign</button>
+              </form>
+            <% } %>
+          </td>
+
+          <!-- Status -->
+          <td>
+            <!-- ✅ Live-update badge -->
+            <span class="badge rounded-pill border <%= statusClass %>" data-task-status><%= t.status %></span>
+
+            <% if (isMine || canManage) { %>
+              <form class="d-inline-block ms-2" method="POST" action="/tasks/<%= t._id %>/status">
+                <input type="hidden" name="projectId" value="<%= project._id %>"/>
+                <div class="dropdown d-inline">
+                  <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Update
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-sm">
+                    <li><button class="dropdown-item small" name="status" value="Pending">Pending</button></li>
+                    <li><button class="dropdown-item small" name="status" value="In Progress">In Progress</button></li>
+                    <li><button class="dropdown-item small" name="status" value="Completed">Completed</button></li>
+                  </ul>
+                </div>
+              </form>
+            <% } %>
+          </td>
+
+          <!-- Priority -->
+          <td>
+            <span class="badge rounded-pill bg-light border text-body small"><%= t.priority %></span>
+          </td>
+
+          <!-- Due -->
+          <td><%= t.dueDate ? new Date(t.dueDate).toLocaleDateString() : '-' %></td>
+
+          <!-- Actions -->
+          <td class="text-end">
+            <% if (canManage || sameId(t.createdBy, myId)) { %>
+              <form method="POST" action="/tasks/<%= t._id %>/delete" onsubmit="return confirm('Delete this task?');" class="d-inline">
+                <input type="hidden" name="projectId" value="<%= project._id %>"/>
+                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+              </form>
+            <% } else { %>
+              <span class="text-muted small">—</span>
+            <% } %>
+          </td>
+        </tr>
+
+      <% }) %>
+    <% } else { %>
+      <tr><td colspan="6" class="text-center text-muted">No tasks yet.</td></tr>
+    <% } %>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  $(function () {
+    const $tbl = $('#tasksTbl');
+    if ($.fn.dataTable.isDataTable($tbl)) return; // prevent re-init
+
+    $tbl.DataTable({
+      pageLength: 10,
+      order: [[0, 'asc']],
+      columnDefs: [{ targets: [1,2,5], orderable: false }]
+    });
+  });
+</script>
+
+<script>
+  (function () {
+    // Join this project's room
+    if (window.joinProjectRoom) joinProjectRoom('<%= project._id %>');
+
+    // Update status badge live
+    if (window.appSocket) {
+      window.appSocket.on('task:status_changed', (e) => {
+        if (!e || e.projectId !== '<%= project._id %>') return;
+        const row = document.querySelector(`[data-task="${e.taskId}"]`);
+        if (!row) return;
+        const badge = row.querySelector('[data-task-status]');
+        if (!badge) return;
+        badge.textContent = e.status;
+
+        // Optional: change badge classes lightly (3 statuses)
+        badge.className = 'badge rounded-pill border';
+        if (e.status === 'Completed') badge.classList.add('bg-success-subtle', 'text-success', 'border-success');
+        else if (e.status === 'In Progress') badge.classList.add('bg-primary-subtle', 'text-primary', 'border-primary');
+        else badge.classList.add('bg-secondary-subtle', 'text-secondary', 'border-secondary');
+
+        // Toast
+        if (window.pushToast) pushToast('Task Updated', `${e.title || 'Task'} → ${e.status}`);
+      });
+
+      window.appSocket.on('task:assigned', (e) => {
+        if (!e || e.projectId !== '<%= project._id %>') return;
+        // Optionally mark assigned badge or show toast
+        if (window.pushToast) pushToast('Task Assigned', `${e.title || 'Task'} assigned`);
+      });
+    }
+  })();
+</script>
+

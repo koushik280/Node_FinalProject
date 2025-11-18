@@ -1,0 +1,375 @@
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # -----------------------
+    # Common / Utility
+    # -----------------------
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+
+    PaginationMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        pages:
+          type: integer
+
+    # -----------------------
+    # Auth related
+    # -----------------------
+    UserInput:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        password:
+          type: string
+          format: password
+          example: "StrongP@ssw0rd!"
+        phone:
+          type: string
+          example: "9999999999"
+        role:
+          type: string
+          description: Role _id (optional during register; admin may set)
+        isVerified:
+          type: boolean
+          default: false
+
+    # Public user object returned by API (no passwordHash)
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "64b1f8c2a3b4c5d6e7f89012"
+        name:
+          type: string
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        phone:
+          type: string
+          nullable: true
+          example: "9999999999"
+        role:
+          type: string
+          description: Role _id or role name depending on populate
+        isVerified:
+          type: boolean
+        otp:
+          type: object
+          properties:
+            code:
+              type: string
+              nullable: true
+            expiresAt:
+              type: string
+              format: date-time
+              nullable: true
+        avatar:
+          type: object
+          properties:
+            url:
+              type: string
+              example: "https://res.cloudinary.com/..../avatar.jpg"
+            publicId:
+              type: string
+        passwordMustChange:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+    # -----------------------
+    # Role & RBAC
+    # -----------------------
+    Role:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+          enum: ["superadmin", "admin", "manager", "employee"]
+        permissions:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Permission:
+      type: object
+      properties:
+        key:
+          type: string
+        description:
+          type: string
+
+    # -----------------------
+    # Attachments & Comments
+    # -----------------------
+    Attachment:
+      type: object
+      properties:
+        url:
+          type: string
+          example: "https://res.cloudinary.com/.../file.pdf"
+        publicId:
+          type: string
+        name:
+          type: string
+        size:
+          type: integer
+          description: size in bytes
+        type:
+          type: string
+          description: MIME type
+        by:
+          type: string
+          description: user _id who uploaded
+        createdAt:
+          type: string
+          format: date-time
+
+    Comment:
+      type: object
+      properties:
+        _id:
+          type: string
+        by:
+          $ref: '#/components/schemas/User'
+        text:
+          type: string
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+        createdAt:
+          type: string
+          format: date-time
+
+    # -----------------------
+    # Task & Project
+    # -----------------------
+    TaskInput:
+      type: object
+      required:
+        - title
+        - projectId
+      properties:
+        title:
+          type: string
+          example: "Design login page"
+        description:
+          type: string
+        projectId:
+          type: string
+          description: Project _id
+        assignedTo:
+          type: string
+          description: User _id
+        status:
+          type: string
+          enum: ["Pending", "In Progress", "Completed"]
+          default: "Pending"
+        priority:
+          type: string
+          enum: ["Low", "Medium", "High", "Critical"]
+          default: "Medium"
+        dueDate:
+          type: string
+          format: date-time
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+
+    Task:
+      allOf:
+        - $ref: '#/components/schemas/TaskInput'
+        - type: object
+          properties:
+            _id:
+              type: string
+            createdBy:
+              $ref: '#/components/schemas/User'
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    Project:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        owner:
+          $ref: '#/components/schemas/User'
+        managers:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        createdAt:
+          type: string
+          format: date-time
+
+    # -----------------------
+    # Refresh Token store
+    # -----------------------
+    RefreshToken:
+      type: object
+      properties:
+        _id:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+        tokenHash:
+          type: string
+          description: Hashed token (server-side only)
+        userAgent:
+          type: string
+          nullable: true
+        ip:
+          type: string
+          nullable: true
+        isRevoked:
+          type: boolean
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    # -----------------------
+    # Chat & Activity
+    # -----------------------
+    ChatMessage:
+      type: object
+      properties:
+        _id:
+          type: string
+        room:
+          type: string
+          example: "project:64b1f8c2..."
+        senderId:
+          type: string
+          nullable: true
+        senderName:
+          type: string
+          nullable: true
+        isBot:
+          type: boolean
+        message:
+          type: string
+        meta:
+          type: object
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    ActivityLog:
+      type: object
+      properties:
+        _id:
+          type: string
+        userId:
+          $ref: '#/components/schemas/User'
+        action:
+          type: string
+          example: "task.status_changed"
+        entity:
+          type: string
+          example: "Task"
+        entityId:
+          type: string
+        projectId:
+          $ref: '#/components/schemas/Project'
+        metadata:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+  # -----------------------
+  # Common responses and parameters (optional reuse)
+  # -----------------------
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NoContent:
+      description: No Content

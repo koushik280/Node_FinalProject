@@ -1,0 +1,334 @@
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Self-register (signup)
+      description: >
+        Create a new user account. Server assigns default "employee" role,
+        generates an OTP and emails it to the provided address. Returns a
+        generic success message (no tokens).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                  example: "John Doe"
+                email:
+                  type: string
+                  format: email
+                  example: "john@example.com"
+                password:
+                  type: string
+                  format: password
+                  example: "StrongP@ssw0rd!"
+                avatar:
+                  type: object
+                  nullable: true
+                  description: "Optional avatar object (url / publicId)"
+      responses:
+        '201':
+          description: User created. OTP sent to email.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "User created. OTP sent to email."
+        '400':
+          $ref: './components.yaml#/components/responses/BadRequest'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/Error'
+
+  /auth/verify:
+    post:
+      tags: [Auth]
+      summary: Verify email using OTP
+      description: Verify the OTP sent to the user's email during signup.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, otp]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "john@example.com"
+                otp:
+                  type: string
+                  example: "123456"
+      responses:
+        '200':
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: "Email verified" }
+        '400':
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login (email + password)
+      description: >
+        Authenticate user. On success returns an access token in the JSON response
+        and sets a refresh token in an HttpOnly cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "john@example.com"
+                password:
+                  type: string
+                  format: password
+                  example: "StrongP@ssw0rd!"
+      responses:
+        '200':
+          description: Logged in — access token returned and refresh cookie set.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message:
+                    type: string
+                    example: "Logged in"
+                  data:
+                    type: object
+                    properties:
+                      accessToken:
+                        type: string
+                        example: "eyJhbGciOiJIUzI1NiIsInR5cCI..."
+                      forceChangePassword:
+                        type: boolean
+                        example: false
+                      user:
+                        type: object
+                        properties:
+                          id: { type: string }
+                          name: { type: string }
+                          email: { type: string }
+                          role: { type: string }
+          headers:
+            Set-Cookie:
+              description: Refresh token cookie (HttpOnly, Secure in production). The refresh token is rotated/stored server-side.
+              schema:
+                type: string
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/Error'
+        '403':
+          description: Email not verified
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/Error'
+
+  /auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Change password (authenticated)
+      description: >
+        Change the current user's password. Requires the current password. On success,
+        revokes all active refresh tokens for that user.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [oldPassword, newPassword]
+              properties:
+                oldPassword:
+                  type: string
+                newPassword:
+                  type: string
+      responses:
+        '200':
+          description: Password updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: "Password updated" }
+        '400':
+          description: Old password incorrect
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/Error'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token (rotate refresh token)
+      description: >
+        Reads the refresh token from the HttpOnly cookie, verifies it and issues a new access token.
+        Refresh token rotation is performed server-side; a new refresh cookie is set.
+      responses:
+        '200':
+          description: New access token issued (and refresh token rotated via Set-Cookie)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  data:
+                    type: object
+                    properties:
+                      accessToken:
+                        type: string
+          headers:
+            Set-Cookie:
+              description: New refresh token cookie (rotated)
+              schema:
+                type: string
+        '401':
+          description: Invalid or missing refresh token
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout (revoke presented refresh token)
+      description: >
+        Revokes the refresh token presented in the cookie and clears the cookie.
+        Can be called without Authorization header — cookie is sufficient.
+      responses:
+        '200':
+          description: Logged out (cookie cleared)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: "Logged out" }
+          headers:
+            Set-Cookie:
+              description: Cookie cleared (Set-Cookie with expired cookie)
+              schema:
+                type: string
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Forgot password (send reset link)
+      description: >
+        Issues a one-time reset token and emails a reset link. Response is intentionally generic to avoid email enumeration.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Generic success message (email sent if account exists)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message:
+                    type: string
+                    example: "If an account exists, a password reset link has been sent to your email."
+        '500':
+          description: Server error while sending mail
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/Error'
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password using token
+      description: >
+        Accepts the reset token (from email link) and a new password. On success the password is updated and all refresh tokens revoked.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token:
+                  type: string
+                  description: "Reset token from email link"
+                newPassword:
+                  type: string
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message:
+                    type: string
+                    example: "Password reset successfully. Please log in."
+        '400':
+          description: Invalid or expired reset token
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/Error'

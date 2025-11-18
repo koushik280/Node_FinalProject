@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>TeamBoard — Project Management</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #2563eb;
+        --soft-bg: #f9fafb;
+        --font: Inter, system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial;
+      }
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap");
+      body {
+        font-family: var(--font);
+        background: #fff;
+        color: #0f172a;
+      }
+      header {
+        border-bottom: 1px solid #eef2f7;
+        background: #fff;
+      }
+      .hero-title {
+        font-weight: 800;
+        line-height: 1.06;
+        font-size: 3.2rem;
+      }
+      @media (min-width: 992px) {
+        .hero-title {
+          font-size: 4.5rem;
+        }
+      }
+      .hero-sub {
+        color: #6b7280;
+        font-size: 1.05rem;
+      }
+      .feature-card {
+        border-radius: 12px;
+        background: var(--soft-bg);
+        padding: 1.6rem;
+        transition: 0.18s ease;
+      }
+      .feature-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+      }
+      .btn-primary-custom {
+        background: var(--primary);
+        border-color: var(--primary);
+      }
+      .btn-primary-custom:hover {
+        background: #1e40af;
+        border-color: #1e40af;
+      }
+      footer {
+        background: #0b1220;
+        color: #cbd5e1;
+        padding-top: 2.4rem;
+        padding-bottom: 1.6rem;
+        margin-top: 4rem;
+      }
+      .hero-illustration {
+        border-radius: 12px;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+        max-width: 100%;
+      }
+      .container-narrow {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+    </style>
+  </head>
+  <body>
+    <% /* make sure webAuth(false) sets res.locals.me or res.locals.user if
+    available */ %> <% const meUser = (typeof me !== 'undefined' && me) ||
+    (typeof user !== 'undefined' && user) || null; %>
+
+    <!-- simple header — lightweight so it doesn't pull your app sidebar/partials -->
+    <header class="py-3">
+      <div
+        class="container container-narrow d-flex align-items-center justify-content-between"
+      >
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-columns-gap fs-3 text-primary"></i>
+          <a href="/" class="text-decoration-none h5 mb-0 fw-bold text-dark"
+            >TeamBoard</a
+          >
+        </div>
+
+        <div>
+          <% if (meUser) { %>
+          <a href="/dashboard" class="btn btn-sm btn-outline-secondary me-2"
+            >Dashboard</a
+          >
+          <a href="/logout" class="btn btn-sm btn-outline-danger">Logout</a>
+          <% } else { %>
+          <a href="/register" class="btn btn-sm btn-outline-primary me-2"
+            >Register</a
+          >
+          <a href="/login" class="btn btn-sm btn-primary btn-primary-custom"
+            >Sign in</a
+          >
+          <% } %>
+        </div>
+      </div>
+    </header>
+
+    <main class="container container-narrow py-5">
+      <section class="row align-items-center gy-4">
+        <div class="col-lg-6">
+          <h1 class="hero-title">
+            A professional <br />project management system
+          </h1>
+          <p class="hero-sub mt-3">
+            Manage projects, assign tasks, and collaborate with role-based
+            permissions, file uploads, task tracking and a built-in chat —
+            everything you already have in your app.
+          </p>
+
+          <div class="d-flex gap-3 mt-4">
+            <% if (meUser) { %>
+            <a
+              href="/dashboard"
+              class="btn btn-lg btn-primary btn-primary-custom px-4 py-2"
+              >Go to dashboard</a
+            >
+            <a
+              href="/projects"
+              class="btn btn-lg btn-outline-secondary px-4 py-2"
+              >View projects</a
+            >
+            <% } else { %>
+            <a
+              href="/register"
+              class="btn btn-lg btn-primary btn-primary-custom px-4 py-2"
+              >Create an account</a
+            >
+            <a href="/login" class="btn btn-lg btn-outline-secondary px-4 py-2"
+              >Sign in</a
+            >
+            <% } %>
+          </div>
+
+          <button class="btn btn-outline-primary btn-lg mt-3 px-4" id="openBot">
+            <i class="bi bi-robot me-2"></i> Ask our Chatbot
+          </button>
+
+          <ul class="list-unstyled mt-4">
+            <li class="d-flex align-items-center mb-2">
+              <i class="bi bi-check-circle-fill text-success me-2"></i>
+              Real-time chat & updates
+            </li>
+            <li class="d-flex align-items-center mb-2">
+              <i class="bi bi-check-circle-fill text-success me-2"></i>
+              Role-based access (admin/editor/user)
+            </li>
+            <li class="d-flex align-items-center mb-2">
+              <i class="bi bi-check-circle-fill text-success me-2"></i> Project,
+              task & member management
+            </li>
+          </ul>
+        </div>
+
+        <div class="col-lg-6 d-flex justify-content-center">
+          <!-- Illustration placeholder (replace with your cloudinary URL if you want) -->
+          <img
+            class="hero-illustration"
+            style="max-width: 700px; width: 100%; height: auto"
+            src="https://tivazo.com/wp-content/uploads/2024/07/project-management-software-blog-1024x578-1.jpeg"
+            alt="TeamBoard dashboard preview — tasks, charts and members"
+          />
+        </div>
+      </section>
+
+      <!-- Core features -->
+      <section class="mt-5">
+        <h3 class="fw-bold mb-4 text-center">Core features you already have</h3>
+        <div class="row g-4">
+          <div class="col-md-4">
+            <div class="feature-card h-100 text-center">
+              <div class="mb-3">
+                <i class="bi bi-people-fill fs-2 text-primary"></i>
+              </div>
+              <h5 class="mb-1">Projects & Teams</h5>
+              <p class="small text-muted mb-0">
+                Create projects, assign managers & members and control
+                visibility.
+              </p>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="feature-card h-100 text-center">
+              <div class="mb-3">
+                <i class="bi bi-list-task fs-2 text-primary"></i>
+              </div>
+              <h5 class="mb-1">Tasks & Status</h5>
+              <p class="small text-muted mb-0">
+                Create tasks, set priority/due dates, assign and update status.
+              </p>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="feature-card h-100 text-center">
+              <div class="mb-3">
+                <i class="bi bi-chat-dots-fill fs-2 text-primary"></i>
+              </div>
+              <h5 class="mb-1">Built-in Chat</h5>
+              <p class="small text-muted mb-0">
+                Team communication with command-driven bot for quick task
+                actions.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="container container-narrow">
+        <div class="row">
+          <div class="col-md-6">
+            <h6 class="text-white fw-bold">TeamBoard</h6>
+            <small class="text-white-50"
+              >Demo project management system — submission-ready UI for your
+              exam.</small
+            >
+          </div>
+          <div class="col-md-6 text-md-end">
+            <small class="text-white-50">Contact: support@example.com</small>
+          </div>
+        </div>
+        <div class="text-center text-white-50 mt-3 small">
+          &copy; <span id="yr"></span> TeamBoard
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      document.getElementById("yr").textContent = new Date().getFullYear();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+     <!-- ⭐ Guest Chat Modal (paste here) -->
+  <div class="modal fade" id="botModal">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Chat with TeamBoard Bot</h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-0" style="height:70vh;">
+          <iframe src="/chat/guest" style="width:100%;height:100%;border:0;"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- include socket.io client -->
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  // openBot button opens modal (you already have this)
+  document.getElementById('openBot')?.addEventListener('click', () => {
+    const modalEl = document.getElementById('botModal');
+    new bootstrap.Modal(modalEl).show();
+    // focus input inside iframe or the input if not using iframe
+    setTimeout(() => {
+      const iframe = modalEl.querySelector('iframe');
+      if (!iframe) {
+        document.getElementById('botInput')?.focus();
+      }
+    }, 200);
+  });
+
+  // connect socket as guest (no auth)
+  const socket = io({ transports: ['websocket', 'polling'], withCredentials: true });
+
+  // UI elements inside modal (if using direct modal content, not iframe)
+  const chatForm = document.getElementById('chatForm'); // form inside modal
+  const chatInput = document.getElementById('text'); // input id from your chat
+  const messages = document.getElementById('messages');
+
+  function addMsg(text, who = 'bot') {
+    const el = document.createElement('div');
+    el.className = 'msg ' + (who === 'user' ? 'user' : 'bot');
+    el.innerHTML = `<div>${text}</div>`;
+    messages.appendChild(el);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  // If you used iframe approach, inside iframe you should call socket.emit('chat:guest', { text })
+  // Here is the in-page handler (non-iframe)
+  if (chatForm) {
+    chatForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const txt = (chatInput.value || '').trim();
+      if (!txt) return;
+      addMsg(txt, 'user');
+      chatInput.value = '';
+      socket.emit('chat:guest', { text: txt });
+    });
+  }
+
+  socket.on('connect', () => {
+    console.log('socket connected', socket.id);
+  });
+
+  socket.on('chat:guest:reply', (payload) => {
+    const reply = payload?.reply || payload?.text || payload?.replyText || '';
+    addMsg(reply, 'bot');
+  });
+
+  socket.on('connect_error', (err) => {
+    console.warn('Socket connect error', err);
+    addMsg('Chat temporarily unavailable. Please try again later.');
+  });
+</script>
+
+  </body>
+</html>

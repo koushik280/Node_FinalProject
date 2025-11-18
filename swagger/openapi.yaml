@@ -1,0 +1,35 @@
+openapi: 3.0.0
+info:
+  title: Team_Board API
+  version: "1.0.0"
+  description: >
+    Modular API Docs for Team_Board.  
+    All paths are split across multiple YAML files.
+
+servers:
+  - url: http://localhost:5000/api
+    description: Local Development
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Projects
+  - name: Tasks
+  - name: Activity
+  - name: Misc
+
+# ---- IMPORT ALL PATH FILES HERE ----
+x-paths:
+  auth: ./auth.yaml
+  users: ./users.yaml
+  projects: ./projects.yaml
+  tasks: ./tasks.yaml
+  activity: ./activity.yaml
+  misc: ./misc.yaml
+
+# ---- COMPONENTS (schemas, security, responses)
+components:
+  $ref: './components.yaml#/components'
+
+security:
+  - bearerAuth: []

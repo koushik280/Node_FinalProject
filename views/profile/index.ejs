@@ -1,0 +1,87 @@
+<% const meUser = me || {}; %>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8 col-xl-7">
+    <div class="card shadow-sm mb-3">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="position-relative">
+          <img
+            src="<%= meUser.avatar?.url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(meUser.name || meUser.email || 'User') %>"
+            alt="Avatar"
+            class="rounded-circle"
+            style="width: 96px; height: 96px; object-fit: cover"
+          />
+        </div>
+        <div>
+          <h5 class="mb-1"><%= meUser.name || 'User' %></h5>
+          <div class="text-muted small"><%= meUser.email %></div>
+          <div class="badge bg-light text-body border small mt-1">
+            Role: <%= meUser.role?.name || meUser.role || '—' %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h6 class="mb-3">Change Profile Image</h6>
+            <form
+              method="POST"
+              action="/profile/avatar"
+              enctype="multipart/form-data"
+              class="vstack gap-2"
+            >
+              <input
+                type="file"
+                name="avatar"
+                accept="image/*"
+                class="form-control"
+                required
+              />
+              <button class="btn btn-primary">Upload</button>
+            </form>
+            <div class="form-text mt-2">Images are uploaded to Cloudinary.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h6 class="mb-3">Basic Info</h6>
+            <form method="POST" action="/profile" class="vstack gap-2">
+              <div>
+                <label class="form-label small">Full Name</label>
+                <input
+                  name="name"
+                  class="form-control"
+                  value="<%= meUser.name || '' %>"
+                  required
+                />
+              </div>
+              <div>
+                <label class="form-label small">Email</label>
+                <input
+                  class="form-control"
+                  value="<%= meUser.email || '' %>"
+                  disabled
+                />
+              </div>
+              <button class="btn btn-outline-primary mt-2">Save</button>
+            </form>
+            <div class="mt-3">
+              <a
+                href="/profile/change-password"
+                class="btn btn-sm btn-link text-decoration-none"
+              >
+                <i class="bi bi-lock"></i> Change Password
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

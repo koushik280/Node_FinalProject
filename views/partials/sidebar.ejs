@@ -1,0 +1,81 @@
+<%
+  // Who is logged in (JWT light object)
+  const role = (locals.user && locals.user.role) || 'guest';
+
+  // Full user loaded by webAuth (has name/email/avatar)
+  const me = locals.me || {};
+  const meName  = me.name  || '';
+  const meEmail = me.email || '';
+
+  // Build avatar (prefer Cloudinary URL; else ui-avatars by name/email)
+  const baseLabel = meName || meEmail || 'User';
+  const avatarUrl = (me.avatar && me.avatar.url)
+    ? me.avatar.url
+    : ('https://ui-avatars.com/api/?background=0D8ABC&color=fff&name=' + encodeURIComponent(baseLabel));
+
+  // active state helper
+  const is = p => (locals.path || req?.path || '').startsWith(p) ? 'active' : '';
+%>
+
+<aside class="sidebar d-none d-md-block border-end bg-white">
+  <div class="p-3 border-bottom text-center">
+    <div class="position-relative d-inline-block">
+      <img src="<%= avatarUrl %>" alt="avatar"
+           class="rounded-circle shadow-sm" style="width:78px;height:78px;object-fit:cover;cursor:pointer;">
+      <% if (locals.user) { %>
+      <div class="position-absolute start-50 translate-middle-x mt-2" style="top:84px; display:none;" id="avatarMenu">
+        <div class="card shadow-sm" style="min-width: 180px;">
+          <div class="list-group list-group-flush">
+            <a href="/profile" class="list-group-item list-group-item-action">Update Profile</a>
+            <a href="#" class="list-group-item list-group-item-action"
+               onclick="document.getElementById('avatarFile').click()">Change Image</a>
+            <a href="/logout" class="list-group-item list-group-item-action text-danger">Logout</a>
+          </div>
+        </div>
+      </div>
+      <% } %>
+    </div>
+
+    <div class="mt-2 small text-muted text-truncate px-3" title="<%= meEmail %>">
+      <%= meEmail || '&nbsp;' %>
+    </div>
+
+    <!-- hidden avatar upload form -->
+    <form id="avatarForm" action="/profile/avatar" method="POST" enctype="multipart/form-data" class="d-none">
+      <input id="avatarFile" type="file" name="avatar" accept="image/*" />
+    </form>
+  </div>
+
+  <nav class="nav flex-column p-2">
+    <a class="nav-link <%= is('/dashboard') %>" href="/dashboard"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a>
+    <a class="nav-link <%= is('/projects') %>" href="/projects"><i class="bi bi-kanban me-2"></i> Projects</a>
+    <% if (role === 'superadmin' || role === 'admin') { %>
+      <a class="nav-link <%= is('/users') %>" href="/users"><i class="bi bi-people me-2"></i> Users</a>
+    <% } %>
+    <a class="nav-link <%= is('/tasks') %>" href="/tasks/my"><i class="bi bi-check2-square me-2"></i> My Tasks</a>
+    <a class="nav-link <%= is('/chat') %>" href="/chat"><i class="bi bi-chat-dots me-2"></i> Chat</a>
+  </nav>
+</aside>
+
+<script>
+  (function(){
+    const aside = document.currentScript.parentElement;
+    const img = aside.querySelector('img');
+    const menu = aside.querySelector('#avatarMenu');
+    const file = aside.querySelector('#avatarFile');
+    if (img && menu) {
+      let hideT;
+      const show = ()=>{ clearTimeout(hideT); menu.style.display='block'; };
+      const hide = ()=>{ hideT = setTimeout(()=> menu.style.display='none', 180); };
+      img.addEventListener('mouseenter', show);
+      img.addEventListener('mouseleave', hide);
+      menu.addEventListener('mouseenter', show);
+      menu.addEventListener('mouseleave', hide);
+    }
+    if (file) {
+      file.addEventListener('change', () => {
+        if (file.files && file.files[0]) aside.querySelector('#avatarForm').submit();
+      });
+    }
+  })();
+</script>

@@ -1,0 +1,310 @@
+paths:
+  /users:
+    get:
+      tags: [Users]
+      summary: List users (admin+)
+      description: List users with pagination and optional filters (role, search).
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number (1-based)
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Items per page
+        - in: query
+          name: role
+          schema:
+            type: string
+          description: Role name to filter (e.g. employee, manager)
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Partial match against name or email
+      responses:
+        '200':
+          description: Paginated users list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      users:
+                        type: array
+                        items:
+                          $ref: './components.yaml#/components/schemas/User'
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+
+    post:
+      tags: [Users]
+      summary: Create user (superadmin)
+      description: Create a new user. Only `superadmin` can call this endpoint. If password is omitted a temporary one will be generated and emailed.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email]
+              properties:
+                name:
+                  type: string
+                  example: "Alice"
+                email:
+                  type: string
+                  format: email
+                  example: "alice@example.com"
+                password:
+                  type: string
+                  description: Optional — if omitted a temp password will be created
+                roleName:
+                  type: string
+                  example: "employee"
+                isVerified:
+                  type: boolean
+                  default: true
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "User created by Super Admin & login credentials sent to email"
+                  data:
+                    $ref: './components.yaml#/components/schemas/User'
+        '400':
+          $ref: './components.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden (not superadmin)
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/Error'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/Error'
+
+  /users/by-email:
+    get:
+      tags: [Users]
+      summary: Get user by email
+      description: Returns a user's public profile by email (search).
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: email
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      email:
+                        type: string
+                        format: email
+                      role:
+                        $ref: './components.yaml#/components/schemas/Role'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get current user's profile
+      description: Returns the authenticated user's profile information.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: './components.yaml#/components/schemas/User'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Get user by id
+      description: Retrieve a single user by their id. Admin privileges required.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            description: Mongo ObjectId of the user
+      responses:
+        '200':
+          description: User object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: './components.yaml#/components/schemas/User'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+
+    put:
+      tags: [Users]
+      summary: Update user role
+      description: Update a user's role. Admin-level RBAC checks are performed server-side.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roleName]
+              properties:
+                roleName:
+                  type: string
+                  example: manager
+      responses:
+        '200':
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Role updated"
+                  data:
+                    $ref: './components.yaml#/components/schemas/User'
+        '400':
+          $ref: './components.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+        '403':
+          description: Insufficient privilege to change role
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/Error'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'
+
+    delete:
+      tags: [Users]
+      summary: Hard delete a user (superadmin only)
+      description: Permanently deletes a user, removes refresh tokens, unassigns tasks and cleans project references.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "User deleted successfully."
+        '400':
+          $ref: './components.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden (attempt to delete self or a superadmin)
+          content:
+            application/json:
+              schema:
+                $ref: './components.yaml#/components/schemas/Error'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'

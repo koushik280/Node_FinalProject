@@ -1,0 +1,41 @@
+
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h4 class="mb-3">Create User (Super Admin)</h4>
+        <% if (typeof error !== 'undefined') { %>
+          <div class="alert alert-danger"><%= error %></div>
+        <% } %>
+        <form method="POST" action="/users/create">
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label class="form-label">Name</label>
+              <input name="name" class="form-control" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input name="email" type="email" class="form-control" required />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Role</label>
+              <select name="roleName" class="form-select">
+                <option value="employee">Employee</option>
+                <option value="manager">Manager</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Password (optional)</label>
+              <input name="password" type="text" class="form-control" placeholder="leave blank for temp password" />
+            </div>
+          </div>
+          <div class="mt-3 d-flex gap-2">
+            <a href="/users" class="btn btn-outline-secondary">Cancel</a>
+            <button class="btn btn-primary">Create</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,138 @@
+
+<style>
+  :root { --sidebar-w: 280px; --detail-w: 340px; }
+  html, body { height:100%; }
+  .chat-wrap { height: calc(100vh - 56px); } /* adjust if navbar height changes */
+  .col-left { width: var(--sidebar-w); border-right: 1px solid #eee; }
+  .col-mid { flex: 1; display: flex; flex-direction: column; }
+  .col-right { width: var(--detail-w); border-left: 1px solid #eee; }
+  .thread-item { cursor:pointer; }
+  .thread-item.active { background:#f8f9fa; }
+  .msg-list { overflow-y:auto; padding: 1rem; gap: .5rem; display:flex; flex-direction:column; }
+  .msg { max-width: 70%; }
+  .msg.me { align-self:flex-end; }
+  .msg .bubble { border-radius: 14px; padding: .5rem .75rem; }
+  .msg.me .bubble { background:#dbeafe; }
+  .msg.other .bubble { background:#f2f2f2; }
+  .composer { border-top:1px solid #eee; padding:.5rem; }
+  .quick { gap: .5rem; }
+  .btn-chip { border:1px solid #ddd; border-radius: 24px; padding:.25rem .6rem; background:#fff; }
+  .detail-pane { height:100%; overflow-y:auto; }
+  .detail-empty { color:#999; font-style:italic; }
+  .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background:#f6f8fa; padding:.35rem .5rem; border-radius:6px; }
+</style>
+
+<div class="container-fluid p-0 chat-wrap d-flex">
+  <!-- LEFT: Threads / Rooms -->
+  <aside class="col-left d-flex flex-column">
+    <div class="p-2 border-bottom d-flex align-items-center justify-content-between">
+      <div class="fw-semibold">Conversations</div>
+      <button class="btn btn-sm btn-outline-secondary" id="btnNewRoom"><i class="bi bi-plus-lg"></i></button>
+    </div>
+    <div class="p-2">
+      <input id="threadSearch" class="form-control form-control-sm" placeholder="Search…" />
+    </div>
+    <div id="threadList" class="list-group list-group-flush flex-grow-1 overflow-auto">
+  <!-- Global room -->
+  <a class="list-group-item list-group-item-action thread-item active" data-room="global">
+    <div class="d-flex justify-content-between">
+      <div>
+        <div class="fw-semibold"># global</div>
+        <div class="small text-muted">General room</div>
+      </div>
+      <div class="small text-muted">now</div>
+    </div>
+  </a>
+
+  <% // Role-based room for management %>
+  <% if (['superadmin', 'admin', 'manager'].includes(me?.role)) { %>
+    <a class="list-group-item list-group-item-action thread-item" data-room="managers">
+      <div class="d-flex justify-content-between">
+        <div>
+          <div class="fw-semibold"># managers</div>
+          <div class="small text-muted">Management room</div>
+        </div>
+        <div class="small text-muted">&nbsp;</div>
+      </div>
+    </a>
+  <% } %>
+
+  <% // Project-specific rooms %>
+  <% if (projects && projects.length) { %>
+    <div class="list-group-divider my-2"></div>
+    <% projects.forEach(p => { %>
+      <a class="list-group-item list-group-item-action thread-item" data-room="project:<%= p._id %>">
+        <div class="d-flex justify-content-between">
+          <div>
+            <div class="fw-semibold"># <%= p.name %></div>
+            <div class="small text-muted">Project room</div>
+          </div>
+          <div class="small text-muted">&nbsp;</div>
+        </div>
+      </a>
+    <% }) %>
+  <% } else { %>
+    <div class="p-3 small text-muted">No projects available.</div>
+  <% } %>
+</div>
+
+  </aside>
+
+  <!-- CENTER: Messages -->
+  <main class="col-mid">
+    <div class="border-bottom p-2 d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center gap-2">
+        <div class="fw-semibold" id="roomTitle"># <%= room %></div>
+        <span class="badge text-bg-light" id="memberCount">0 online</span>
+      </div>
+      <div class="d-none d-md-flex quick">
+        <button class="btn btn-sm btn-chip" data-cmd="my tasks">my tasks</button>
+        <button class="btn btn-sm btn-chip" data-cmd="project summary">project summary</button>
+        <button class="btn btn-sm btn-chip" data-cmd="status to">status to …</button>
+        <button class="btn btn-sm btn-chip" data-cmd="assign to">assign to …</button>
+      </div>
+    </div>
+
+    <div id="msgList" class="msg-list"></div>
+
+    <div class="composer">
+      <div class="d-flex align-items-end gap-2">
+        <div class="flex-grow-1">
+          <textarea id="composer" class="form-control" rows="2"
+            placeholder="Type a message or a command (e.g., my tasks, status to #3 done)…"></textarea>
+          <div class="small text-muted mt-1">
+            Commands: <span class="code">my tasks</span>,
+            <span class="code">status to #</span>,
+            <span class="code">status to</span>,
+            <span class="code">assign to</span>,
+            <span class="code">project summary</span>
+          </div>
+        </div>
+        <div class="d-flex flex-column gap-2">
+          <button id="btnSend" class="btn btn-primary"><i class="bi bi-send"></i></button>
+          <!-- <label class="btn btn-outline-secondary mb-0">
+            <i class="bi bi-paperclip"></i>
+            <input type="file" id="filePick" class="d-none" />
+          </label> -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT: Task details -->
+  <aside class="col-right">
+    <div class="detail-pane p-3" id="detailPane">
+      <div class="detail-empty">
+        Select a task reference like <span class="code">#3</span> from “my tasks” to view & edit here.
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+  window.__ME__ = <%- JSON.stringify(me || {}) %>;
+  window.__ROOM__ = <%- JSON.stringify(room || 'global') %>;
+</script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/chat.js"></script>
+

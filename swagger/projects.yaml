@@ -1,0 +1,431 @@
+paths:
+  /projects:
+    get:
+      tags: [Projects]
+      summary: Public project list (short)
+      description: Returns a short list of projects (id + name). Public endpoint used for quick lookups.
+      responses:
+        '200':
+          description: List of projects (short)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id: { type: string }
+                        name: { type: string }
+
+    post:
+      tags: [Projects]
+      summary: Create project
+      description: Create a new project. Requires admin or higher (RBAC enforced server-side).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: "Website Redesign"
+                description:
+                  type: string
+                managers:
+                  type: array
+                  items:
+                    type: string
+                  description: "Array of user ids"
+                members:
+                  type: array
+                  items:
+                    type: string
+                  description: "Array of user ids"
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string }
+                  data:
+                    $ref: './components.yaml#/components/schemas/Project'
+        '400':
+          $ref: './components.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './components.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './components.yaml#/components/schemas/Error'
+
+  /projects:
+    parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 10
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Search by project name
+    get:
+      tags: [Projects]
+      summary: List projects (paginated & scoped)
+      description: >
+        Returns projects visible to the authenticated user:
+        - superadmin: all projects
+        - admin: projects they own
+        - manager/employee: projects where they are manager or member
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Paginated list of projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  data:
+                    type: object
+                    properties:
+                      projects:
+                        type: array
+                        items:
+                          $ref: './components.yaml#/components/schemas/Project'
+                      page: { type: integer }
+                      limit: { type: integer }
+                      total: { type: integer }
+
+  /projects/{id}:
+    get:
+      tags: [Projects]
+      summary: Get project details
+      description: Returns project details. Visible to owner, managers, members, admin and superadmin.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  data:
+                    $ref: './components.yaml#/components/schemas/Project'
+        '400':
+          $ref: './components.yaml#/components/responses/BadRequest'
+        '403':
+          $ref: './components.yaml#/components/schemas/Error'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'
+
+    put:
+      tags: [Projects]
+      summary: Update project
+      description: Update project fields (name, description, managers, members). Only owner or superadmin can edit.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+                managers:
+                  type: array
+                  items: { type: string }
+                members:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200':
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string }
+                  data:
+                    $ref: './components.yaml#/components/schemas/Project'
+        '400':
+          $ref: './components.yaml#/components/responses/BadRequest'
+        '403':
+          $ref: './components.yaml#/components/schemas/Error'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'
+
+    delete:
+      tags: [Projects]
+      summary: Delete project
+      description: Delete a project. Only owner or superadmin can delete.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Project deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string }
+        '403':
+          $ref: './components.yaml#/components/schemas/Error'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'
+
+  /projects/{id}/managers/add:
+    put:
+      tags: [Projects]
+      summary: Add managers to project
+      description: Only owner or superadmin can add managers. Accepts array of userIds (must have manager role).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userIds]
+              properties:
+                userIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Managers added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string }
+                  data:
+                    $ref: './components.yaml#/components/schemas/Project'
+        '400':
+          $ref: './components.yaml#/components/responses/BadRequest'
+        '403':
+          $ref: './components.yaml#/components/schemas/Error'
+
+  /projects/{id}/managers/remove:
+    put:
+      tags: [Projects]
+      summary: Remove managers from project
+      description: Only owner or superadmin can remove managers. Accepts array of userIds.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userIds]
+              properties:
+                userIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Managers removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string }
+                  data:
+                    $ref: './components.yaml#/components/schemas/Project'
+        '400':
+          $ref: './components.yaml#/components/responses/BadRequest'
+        '403':
+          $ref: './components.yaml#/components/schemas/Error'
+
+  /projects/{id}/members:
+    get:
+      tags: [Projects]
+      summary: Get project members & managers
+      description: Returns managers and members for a project. Visible to owner, managers, members, admin and superadmin.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Project members and managers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  data:
+                    type: object
+                    properties:
+                      project:
+                        type: object
+                        properties:
+                          id: { type: string }
+                          name: { type: string }
+                      managers:
+                        type: array
+                        items:
+                          $ref: './components.yaml#/components/schemas/User'
+                      members:
+                        type: array
+                        items:
+                          $ref: './components.yaml#/components/schemas/User'
+        '403':
+          $ref: './components.yaml#/components/schemas/Error'
+        '404':
+          $ref: './components.yaml#/components/responses/NotFound'
+
+  /projects/{id}/members/add:
+    put:
+      tags: [Projects]
+      summary: Add members to project
+      description: Only owner or superadmin can add members. Accepts array of userIds (must have employee role).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userIds]
+              properties:
+                userIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Members added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string }
+                  data:
+                    $ref: './components.yaml#/components/schemas/Project'
+        '400':
+          $ref: './components.yaml#/components/responses/BadRequest'
+        '403':
+          $ref: './components.yaml#/components/schemas/Error'
+
+  /projects/{id}/members/remove:
+    put:
+      tags: [Projects]
+      summary: Remove members from project
+      description: Only owner or superadmin can remove members. Also unassigns tasks assigned to removed members.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userIds]
+              properties:
+                userIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Members removed and tasks unassigned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string }
+                  data:
+                    $ref: './components.yaml#/components/schemas/Project'
+        '400':
+          $ref: './components.yaml#/components/responses/BadRequest'
+        '403':
+          $ref: './components.yaml#/components/schemas/Error'
