@@ -4,14 +4,29 @@
       <div class="card-body p-4">
         <div class="text-center mb-3">
           <i class="bi bi-shield-lock fs-1 text-primary"></i>
-          <h5 class="mt-2 mb-0">Welcome back</h5>
-          <div class="text-muted small">Sign in to continue</div>
+
+          <h5 class="mt-2 mb-0">
+            <%= mode === 'authority' ? 'Authority Login' : 'Welcome back' %>
+          </h5>
+
+          <div class="text-muted small">
+            <%= mode === 'authority'
+                ? 'Super Admin / Admin / Manager Access Only'
+                : 'Sign in to continue'
+            %>
+          </div>
         </div>
-        <form method="POST" action="/login" class="vstack gap-3">
+
+        <form
+          method="POST"
+          action="<%= mode === 'authority' ? '/authority/login' : '/login' %>"
+          class="vstack gap-3"
+        >
           <div>
             <label class="form-label small">Email</label>
             <input name="email" type="email" class="form-control" required />
           </div>
+
           <div>
             <label class="form-label small">Password</label>
             <input
@@ -21,15 +36,27 @@
               required
             />
           </div>
+
           <div class="text-end small mt-n2 mb-2">
-            <a href="/forgot-password" class="text-secondary"
-              >Forgot Password?</a
-            >
+            <a href="/forgot-password" class="text-secondary">Forgot Password?</a>
           </div>
-          <button class="btn btn-primary w-100">Login</button>
-          <div class="text-center small">
-            Don’t have an account? <a href="/register">Create one</a>
-          </div>
+
+          <button class="btn btn-primary w-100">
+            <%= mode === 'authority' ? 'Login as Authority' : 'Login' %>
+          </button>
+
+          <% if (!mode) { %>
+            <div class="text-center small">
+              Don’t have an account? <a href="/register">Create one</a>
+            </div>
+
+            <!-- 👇 Authority Login Link (only shows on normal login page) -->
+            <div class="text-center small mt-2">
+              <a href="/authority/login" class="text-danger fw-semibold">
+                Authority Login (Admin / Manager / Super Admin)
+              </a>
+            </div>
+          <% } %>
         </form>
       </div>
     </div>

@@ -8,6 +8,7 @@ const FormData = require("form-data");
 
 const webAuth = require("../../middlewares/webAuth");
 const webRbac = require("../../middlewares/webRbac");
+const jwt=require("jsonwebtoken")
 
 // If you already have a dedicated avatar upload middleware, keep it:
 const { avatarUpload, attachmentUpload } = require("../../middlewares/upload");
@@ -169,7 +170,7 @@ router.post("/reset-password", async (req, res) => {
   }
 });
 
-router.get("/login", (req, res) => res.render("auth/login"));
+router.get("/login", (req, res) => res.render("auth/login",{ mode:null }));
 
 router.post("/login", async (req, res) => {
   try {
@@ -204,6 +205,90 @@ router.post("/login", async (req, res) => {
     return res.redirect("/login");
   }
 });
+
+router.get("/authority/login", (req, res) => {
+  res.render("auth/login", { mode: "authority" });
+});
+
+router.post("/authority/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // 1) Call the SAME API login endpoint
+   const r = await axios.post(
+      `${BASE}/api/auth/login`,
+      { email, password },
+      { withCredentials: true }
+    );
+
+    // Forward refresh cookie(s) from API (so RT stays in sync)
+    const setCookie = r.headers["set-cookie"];
+    if (setCookie && setCookie.length) {
+      res.setHeader("Set-Cookie", setCookie);
+    }
+
+    const at = r.data?.data?.accessToken;
+    if (!at) {
+      req.flash("error", "No access token returned from server");
+      return res.redirect("/authority/login");
+    }
+
+    // 2) Decode token to check role
+    let role = "";
+    try {
+      const payload = jwt.verify(at, process.env.JWT_ACCESS_SECRET);
+      role = (payload.role || "").toLowerCase();
+    } catch (err) {
+      console.error("Authority login token verify fail:", err.message);
+      req.flash("error", "Unable to verify login token");
+      return res.redirect("/authority/login");
+    }
+
+    const allowed = ["superadmin", "admin", "manager"];
+    if (!allowed.includes(role)) {
+      // Not an authority role → don’t let them use this login
+      // Optional: clear AT + inform user
+      res.clearCookie("AT", {
+        httpOnly: true,
+        signed: !!process.env.COOKIE_SECRET,
+        sameSite: "lax",
+      });
+
+      req.flash(
+        "error",
+        "Only SuperAdmin / Admin / Manager can use this login."
+      );
+      return res.redirect("/authority/login");
+    }
+
+    // 3) Set AT cookie only if role is allowed
+    res.cookie("AT", at, {
+      httpOnly: true,
+      signed: !!process.env.COOKIE_SECRET,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 15 * 60 * 1000,
+    });
+
+    // 4) Redirect to authority area (or same dashboard)
+    req.flash("success", `Welcome, ${role}!`);
+    // if you have /admin dashboard, use that; else keep /dashboard
+    return res.redirect("/dashboard");
+  } catch (e) {
+    console.error(
+      "Authority login error:",
+      e.response?.status,
+      e.response?.data || e.message
+    );
+    req.flash(
+      "error",
+      e.response?.data?.message || "Authority login failed"
+    );
+    return res.redirect("/authority/login");
+  }
+});
+
+
 
 router.get("/logout", async (req, res) => {
   try {
@@ -772,13 +857,18 @@ router.get("/register", (req, res) =>
   res.render("auth/register", { form: {} })
 );
 
-router.post("/register", avatarUpload.single('avatar'), async (req, res) => {
+router.post("/register", avatarUpload.single("avatar"), async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
     // If body fields are missing, log for debugging
     if (!name || !email || !password) {
-      console.warn("Register: missing fields", { name, email, password, 'content-type': req.headers['content-type'] });
+      console.warn("Register: missing fields", {
+        name,
+        email,
+        password,
+        "content-type": req.headers["content-type"],
+      });
     }
 
     // If there's no file, just send JSON (simple)
@@ -810,11 +900,18 @@ router.post("/register", avatarUpload.single('avatar'), async (req, res) => {
 
     // keep pending email for verify page
     req.session.pendingEmail = email;
-    req.flash("success", "Registration successful. Enter the OTP sent to your email.");
+    req.flash(
+      "success",
+      "Registration successful. Enter the OTP sent to your email."
+    );
     return res.redirect(`/verify?email=${encodeURIComponent(email)}`);
   } catch (e) {
     // log full response body if present to debug API error
-    console.error("Register error:", e.response?.status, e.response?.data || e.message);
+    console.error(
+      "Register error:",
+      e.response?.status,
+      e.response?.data || e.message
+    );
     req.flash("error", e.response?.data?.message || "Registration failed");
     return res.redirect("/register");
   }
@@ -825,7 +922,12 @@ router.get("/verify", (req, res) => {
   // prefer session pendingEmail, fall back to ?email= query param
   const email = req.session?.pendingEmail || req.query?.email || "";
   // pass any flash messages via locals (flash middleware already does this in many apps)
-  res.render("auth/verify", { email, form: {} , error: req.flash('error')[0], success: req.flash('success')[0] });
+  res.render("auth/verify", {
+    email,
+    form: {},
+    error: req.flash("error")[0],
+    success: req.flash("success")[0],
+  });
 });
 
 // POST: submit OTP to API
@@ -838,7 +940,11 @@ router.post("/verify", async (req, res) => {
     }
 
     // Call API to verify (your API controller expects { email, otp })
-    await axios.post(`${BASE}/api/auth/verify`, { email, otp }, { withCredentials: true });
+    await axios.post(
+      `${BASE}/api/auth/verify`,
+      { email, otp },
+      { withCredentials: true }
+    );
 
     // Mark pendingEmail done (optional)
     if (req.session) delete req.session.pendingEmail;
@@ -846,10 +952,16 @@ router.post("/verify", async (req, res) => {
     req.flash("success", "Email verified — you can now login.");
     return res.redirect("/login");
   } catch (e) {
-    console.error("Verify OTP error:", e.response?.status, e.response?.data || e.message);
+    console.error(
+      "Verify OTP error:",
+      e.response?.status,
+      e.response?.data || e.message
+    );
     // Show the API error message, or a friendly fallback
     req.flash("error", e.response?.data?.message || "Invalid or expired OTP");
-    return res.redirect(`/verify?email=${encodeURIComponent(req.body.email || "")}`);
+    return res.redirect(
+      `/verify?email=${encodeURIComponent(req.body.email || "")}`
+    );
   }
 });
 
