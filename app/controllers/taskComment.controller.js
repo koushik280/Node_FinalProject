@@ -252,124 +252,237 @@ class TaskCommentController {
    Add attachment (single or multi)
    ========================== */
 
+  // async addAttachment(req, res, next) {
+  //   try {
+  //     const { taskId } = req.params;
+
+  //     // 0) Validate IDs
+  //     if (!isObjectId(taskId)) {
+  //       return res
+  //         .status(400)
+  //         .json({ success: false, message: "Invalid task id" });
+  //     }
+
+  //     // 1) Load task + project
+  //     const task = await Task.findById(taskId);
+  //     if (!task)
+  //       return res
+  //         .status(404)
+  //         .json({ success: false, message: "Task not found" });
+
+  //     const project = await Project.findById(task.projectId);
+  //     if (!project)
+  //       return res
+  //         .status(404)
+  //         .json({ success: false, message: "Project not found" });
+
+  //     // 2) Permission: members/managers/owner/SA can attach
+  //     if (!(await canSeeProject(req, project))) {
+  //       return res.status(403).json({ success: false, message: "Not allowed" });
+  //     }
+
+  //     // 3) Collect files from either single or multiple upload shapes
+  //     const incoming = Array.isArray(req.files)
+  //       ? req.files
+  //       : req.file
+  //       ? [req.file]
+  //       : [];
+  //     if (!incoming.length) {
+  //       return res
+  //         .status(400)
+  //         .json({ success: false, message: "No file uploaded" });
+  //     }
+
+  //     // Cap to 10 per request just in case
+  //     const batch = incoming.slice(0, 10);
+
+  //     // Decide resource_type by mimetype (PDF/ZIP/etc => 'raw', images => 'image')
+  //     const resourceTypeFor = (mime = "") =>
+  //       mime.startsWith("image/") ? "image" : "raw";
+
+  //     // 4) Upload – fail fast on first error (simple and predictable)
+  //     const uploaded = [];
+  //     for (const f of batch) {
+  //       const up = await uploadToCloudinary(f.buffer, {
+  //         folder: "teamboard/attachments",
+  //         resource_type: resourceTypeFor(f.mimetype),
+  //       });
+
+  //       console.log("Original Cloudinary URL:", up.url);
+  //       console.log("Original File Name:", f.originalname);
+
+  //       if (!up || up.error) {
+  //         console.error(
+  //           "Cloudinary upload failed for:",
+  //           f.originalname,
+  //           up?.error
+  //         );
+  //         // Skip this file if the upload failed
+  //         continue;
+  //       }
+
+  //       // Extract the extension from the original file name (e.g., '.pdf')
+  //       const fileExtensionMatch = f.originalname.match(/\.\w+$/);
+  //       const extension = fileExtensionMatch ? fileExtensionMatch[0] : "";
+
+  //       const baseUrl = up.secure_url || up.url;
+
+  //       let finalUrl = baseUrl;
+  //       if (
+  //         resourceTypeFor(f.mimetype) === "raw" &&
+  //         !baseUrl.endsWith(extension)
+  //       ) {
+  //         finalUrl += extension;
+  //       }
+  //       uploaded.push({
+  //         url: up.secure_url || up.url,  // PDF/ZIP/etc will be .../raw/upload/...
+  //         publicId: up.public_id || up.publicId,
+  //         name: f.originalname,
+  //         size: f.size,
+  //         type: f.mimetype,
+  //         by: req.user.id,
+  //         resourceType: resourceTypeFor(f.mimetype), // optional but handy for UI
+  //       });
+  //     }
+
+  //     // 5) Persist
+  //     task.attachments.push(...uploaded);
+  //     await task.save();
+
+  //     // 6) Realtime notify the project room
+  //     const io = req.app.get("io");
+  //     io?.to(`project:${String(task.projectId)}`).emit(
+  //       "task:attachment_added",
+  //       {
+  //         taskId: String(task._id),
+  //         projectId: String(task.projectId),
+  //         attachments: uploaded,
+  //       }
+  //     );
+
+  //     // 7) Done
+  //     return res.status(201).json({
+  //       success: true,
+  //       message: `${uploaded.length} attachment(s) added`,
+  //       data: uploaded,
+  //     });
+  //   } catch (e) {
+  //     next(e);
+  //   }
+  // }
+
   async addAttachment(req, res, next) {
-    try {
-      const { taskId } = req.params;
+  try {
+    const { taskId } = req.params;
 
-      // 0) Validate IDs
-      if (!isObjectId(taskId)) {
-        return res
-          .status(400)
-          .json({ success: false, message: "Invalid task id" });
-      }
-
-      // 1) Load task + project
-      const task = await Task.findById(taskId);
-      if (!task)
-        return res
-          .status(404)
-          .json({ success: false, message: "Task not found" });
-
-      const project = await Project.findById(task.projectId);
-      if (!project)
-        return res
-          .status(404)
-          .json({ success: false, message: "Project not found" });
-
-      // 2) Permission: members/managers/owner/SA can attach
-      if (!(await canSeeProject(req, project))) {
-        return res.status(403).json({ success: false, message: "Not allowed" });
-      }
-
-      // 3) Collect files from either single or multiple upload shapes
-      const incoming = Array.isArray(req.files)
-        ? req.files
-        : req.file
-        ? [req.file]
-        : [];
-      if (!incoming.length) {
-        return res
-          .status(400)
-          .json({ success: false, message: "No file uploaded" });
-      }
-
-      // Cap to 10 per request just in case
-      const batch = incoming.slice(0, 10);
-
-      // Decide resource_type by mimetype (PDF/ZIP/etc => 'raw', images => 'image')
-      const resourceTypeFor = (mime = "") =>
-        mime.startsWith("image/") ? "image" : "raw";
-
-      // 4) Upload – fail fast on first error (simple and predictable)
-      const uploaded = [];
-      for (const f of batch) {
-        const up = await uploadToCloudinary(f.buffer, {
-          folder: "teamboard/attachments",
-          resource_type: resourceTypeFor(f.mimetype),
-        });
-
-        console.log("Original Cloudinary URL:", up.url);
-        console.log("Original File Name:", f.originalname);
-
-        if (!up || up.error) {
-          console.error(
-            "Cloudinary upload failed for:",
-            f.originalname,
-            up?.error
-          );
-          // Skip this file if the upload failed
-          continue;
-        }
-
-        // Extract the extension from the original file name (e.g., '.pdf')
-        const fileExtensionMatch = f.originalname.match(/\.\w+$/);
-        const extension = fileExtensionMatch ? fileExtensionMatch[0] : "";
-
-        const baseUrl = up.secure_url || up.url;
-
-        let finalUrl = baseUrl;
-        if (
-          resourceTypeFor(f.mimetype) === "raw" &&
-          !baseUrl.endsWith(extension)
-        ) {
-          finalUrl += extension;
-        }
-        uploaded.push({
-          url: finalUrl, // PDF/ZIP/etc will be .../raw/upload/...
-          publicId: up.publicId,
-          name: f.originalname,
-          size: f.size,
-          type: f.mimetype,
-          by: req.user.id,
-          resourceType: resourceTypeFor(f.mimetype), // optional but handy for UI
-        });
-      }
-
-      // 5) Persist
-      task.attachments.push(...uploaded);
-      await task.save();
-
-      // 6) Realtime notify the project room
-      const io = req.app.get("io");
-      io?.to(`project:${String(task.projectId)}`).emit(
-        "task:attachment_added",
-        {
-          taskId: String(task._id),
-          projectId: String(task.projectId),
-          attachments: uploaded,
-        }
-      );
-
-      // 7) Done
-      return res.status(201).json({
-        success: true,
-        message: `${uploaded.length} attachment(s) added`,
-        data: uploaded,
-      });
-    } catch (e) {
-      next(e);
+    // 0) Validate ID
+    if (!isObjectId(taskId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid task id" });
     }
+
+    // 1) Load task + project
+    const task = await Task.findById(taskId);
+    if (!task) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Task not found" });
+    }
+
+    const project = await Project.findById(task.projectId);
+    if (!project) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Project not found" });
+    }
+
+    // 2) Permission: members/managers/owner/SA can attach
+    if (!(await canSeeProject(req, project))) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Not allowed" });
+    }
+
+    // 3) Collect files from either single or multiple upload shapes
+    const incoming = Array.isArray(req.files)
+      ? req.files
+      : req.file
+      ? [req.file]
+      : [];
+
+    if (!incoming.length) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No file uploaded" });
+    }
+
+    // Cap to 10 per request just in case
+    const batch = incoming.slice(0, 10);
+
+    // 4) Upload – fail fast on first error (simple and predictable)
+    const uploaded = [];
+
+    for (const f of batch) {
+      const up = await uploadToCloudinary(f.buffer, {
+        folder: "teamboard/attachments",
+        resource_type: "auto", // ✅ let Cloudinary detect (image, pdf, zip, doc, etc.)
+      });
+
+      if (!up || up.error) {
+        console.error(
+          "Cloudinary upload failed for:",
+          f.originalname,
+          up?.error
+        );
+        continue;
+      }
+
+      console.log("Cloudinary URL:", up.secure_url || up.url);
+      console.log("Original File Name:", f.originalname);
+
+      uploaded.push({
+        url: up.secure_url || up.url,         // ✅ use Cloudinary URL as-is
+        publicId: up.public_id || up.publicId,
+        name: f.originalname,
+        size: f.size,
+        type: f.mimetype,
+        by: req.user.id,
+      });
+    }
+
+    if (!uploaded.length) {
+      return res
+        .status(500)
+        .json({ success: false, message: "Upload failed for all files" });
+    }
+
+    // 5) Persist
+    task.attachments.push(...uploaded);
+    await task.save();
+
+    // 6) Realtime notify the project room
+    const io = req.app.get("io");
+    io?.to(`project:${String(task.projectId)}`).emit(
+      "task:attachment_added",
+      {
+        taskId: String(task._id),
+        projectId: String(task.projectId),
+        attachments: uploaded,
+      }
+    );
+
+    // 7) Done
+    return res.status(201).json({
+      success: true,
+      message: `${uploaded.length} attachment(s) added`,
+      data: uploaded,
+    });
+  } catch (e) {
+    next(e);
   }
+}
+
 
   /* ==========================
    Delete one attachment by publicId

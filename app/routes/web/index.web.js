@@ -336,7 +336,7 @@ router.get("/logout", async (req, res) => {
   if(role==="superadmin"||role==="admin"||role==="manager"){
     return res.redirect("/authority/login")
   }
-  return res.redirect("/login");
+  return res.redirect("/");
 });
 
 // --- Change password (web) ---
