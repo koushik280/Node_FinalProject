@@ -23,6 +23,32 @@ const BASE =
   process.env.WEB_API_BASE || `http://localhost:${process.env.PORT || 5000}`;
 const canEditProject = (role) => ["superadmin", "admin"].includes(role);
 
+// Helper: can the current user view this project?
+function canViewProject(project, user) {
+  if (!project || !user) return false;
+
+  const role = (user.role || "").toLowerCase();
+  const uid = String(user.id);
+
+  const normalizeId = (val) =>
+    val && typeof val === "object" && val._id ? String(val._id) : String(val);
+
+  const ownerId = project.owner ? normalizeId(project.owner) : null;
+
+  const isOwner = ownerId && ownerId === uid;
+
+  const isManager =
+    Array.isArray(project.managers) &&
+    project.managers.some((m) => normalizeId(m) === uid);
+
+  const isMember =
+    Array.isArray(project.members) &&
+    project.members.some((m) => normalizeId(m) === uid);
+
+  return role === "superadmin" || isOwner || isManager || isMember;
+}
+
+
 /* -------------------------------------------------
    API helper: sends request with AT; on 401 refreshes,
    stores new AT cookie, then retries once.
@@ -541,6 +567,37 @@ router.post(
 );
 
 /* Project details via DB (keeps populated members/managers) */
+// router.get("/projects/:id", webAuth(true), async (req, res) => {
+//   try {
+//     const project = await Project.findById(req.params.id)
+//       .populate({ path: "owner", select: "name email" })
+//       .populate({
+//         path: "managers",
+//         select: "name email role",
+//         populate: { path: "role", select: "name" },
+//       })
+//       .populate({
+//         path: "members",
+//         select: "name email role",
+//         populate: { path: "role", select: "name" },
+//       });
+
+//     if (!project) {
+//       req.flash("error", "Project not found");
+//       return res.redirect("/projects");
+//     }
+
+//     const counts = {
+//       managers: (project.managers || []).length,
+//       members: (project.members || []).length,
+//     };
+//     res.render("projects/show", { project, counts });
+//   } catch (e) {
+//     req.flash("error", "Failed to load project");
+//     res.redirect("/projects");
+//   }
+// });
+
 router.get("/projects/:id", webAuth(true), async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
@@ -561,16 +618,25 @@ router.get("/projects/:id", webAuth(true), async (req, res) => {
       return res.redirect("/projects");
     }
 
+    const me = res.locals.user;
+    if (!canViewProject(project, me)) {
+      req.flash("error", "Forbidden: you are not part of this project");
+      return res.redirect("/projects");
+    }
+
     const counts = {
       managers: (project.managers || []).length,
       members: (project.members || []).length,
     };
-    res.render("projects/show", { project, counts });
+
+    return res.render("projects/show", { project, counts });
   } catch (e) {
+    console.error("Project show error:", e);
     req.flash("error", "Failed to load project");
-    res.redirect("/projects");
+    return res.redirect("/projects");
   }
 });
+
 
 /* Edit project */
 router.get("/projects/:id/edit", webAuth(true), async (req, res) => {
@@ -648,6 +714,35 @@ router.post("/projects/:id/edit", webAuth(true), async (req, res) => {
 //   res.render("projects/members")})
 
 // ✅ GET: Render the "Add/Remove Members" page
+// router.get("/projects/:id/add_members", webAuth(true), async (req, res) => {
+//   try {
+//     const project = await Project.findById(req.params.id)
+//       .populate({
+//         path: "managers",
+//         select: "name email role",
+//         populate: { path: "role", select: "name" },
+//       })
+//       .populate({
+//         path: "members",
+//         select: "name email role",
+//         populate: { path: "role", select: "name" },
+//       })
+//       .lean();
+
+//     if (!project) {
+//       req.flash("error", "Project not found");
+//       return res.redirect("/projects");
+//     }
+
+//     // ✅ Pass full project to EJS
+//     res.render("projects/members", { project });
+//   } catch (err) {
+//     console.error("Error loading add_members page:", err);
+//     req.flash("error", "Failed to load members page");
+//     res.redirect("/projects");
+//   }
+// });
+
 router.get("/projects/:id/add_members", webAuth(true), async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
@@ -668,14 +763,32 @@ router.get("/projects/:id/add_members", webAuth(true), async (req, res) => {
       return res.redirect("/projects");
     }
 
-    // ✅ Pass full project to EJS
-    res.render("projects/members", { project });
+    const me = res.locals.user;
+    const role = (me?.role || "").toLowerCase();
+    const ownerId =
+      project.owner && typeof project.owner === "object"
+        ? String(project.owner._id || project.owner)
+        : String(project.owner || "");
+
+    const isOwner = ownerId && ownerId === String(me.id);
+    const canManageMembers = role === "superadmin" || isOwner;
+
+    if (!canManageMembers) {
+      req.flash(
+        "error",
+        "Only project owner or Super Admin can manage project members"
+      );
+      return res.redirect(`/projects/${req.params.id}`);
+    }
+
+    return res.render("projects/members", { project });
   } catch (err) {
     console.error("Error loading add_members page:", err);
     req.flash("error", "Failed to load members page");
-    res.redirect("/projects");
+    return res.redirect("/projects");
   }
 });
+
 
 // ---------- WEB: project members management (forms submit here) ----------
 // add this near your other project web routes (index.web.js)
@@ -855,6 +968,7 @@ router.get("/projects/:id/members", webAuth(true), async (req, res, next) => {
   }
 });
 
+
 /* =================================================
    SELF REGISTER + OTP
 ================================================= */
@@ -977,6 +1091,39 @@ router.post("/verify", async (req, res) => {
    TASKS (project list, create, assign, status, delete)
 ================================================= */
 // List tasks for a project (DB for project so managers/members are populated)
+// router.get("/projects/:id/tasks", webAuth(true), async (req, res) => {
+//   try {
+//     const project = await Project.findById(req.params.id)
+//       .populate({ path: "owner", select: "name email" })
+//       .populate({
+//         path: "managers",
+//         select: "name email role",
+//         populate: { path: "role", select: "name" },
+//       })
+//       .populate({
+//         path: "members",
+//         select: "name email role",
+//         populate: { path: "role", select: "name" },
+//       });
+
+//     if (!project) {
+//       req.flash("error", "Project not found");
+//       return res.redirect("/projects");
+//     }
+
+//     const r = await api(req, res, {
+//       url: `${BASE}/api/tasks/project/${req.params.id}`,
+//       method: "GET",
+//     });
+//     const tasks = r.data?.data?.tasks || r.data?.data || [];
+//     res.render("tasks/index", { project, tasks });
+//   } catch (e) {
+//     res
+//       .status(500)
+//       .render("errors/500", { error: e.response?.data?.message || e.message });
+//   }
+// });
+
 router.get("/projects/:id/tasks", webAuth(true), async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
@@ -997,18 +1144,26 @@ router.get("/projects/:id/tasks", webAuth(true), async (req, res) => {
       return res.redirect("/projects");
     }
 
+    const me = res.locals.user;
+    if (!canViewProject(project, me)) {
+      req.flash("error", "Forbidden: you are not part of this project");
+      return res.redirect("/projects");
+    }
+
     const r = await api(req, res, {
       url: `${BASE}/api/tasks/project/${req.params.id}`,
       method: "GET",
     });
+
     const tasks = r.data?.data?.tasks || r.data?.data || [];
-    res.render("tasks/index", { project, tasks });
+    return res.render("tasks/index", { project, tasks });
   } catch (e) {
-    res
-      .status(500)
-      .render("errors/500", { error: e.response?.data?.message || e.message });
+    console.error("Project tasks error:", e);
+    req.flash("error", "Failed to load project tasks");
+    return res.render("tasks/index", { project: null, tasks: [] });
   }
 });
+
 
 // Create
 router.post("/projects/:id/tasks/create", webAuth(true), async (req, res) => {
