@@ -348,5 +348,5 @@ app.use((err, req, res, next) => {
 //app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on${PORT}`);
 });
