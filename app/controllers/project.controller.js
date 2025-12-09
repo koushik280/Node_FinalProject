@@ -103,6 +103,9 @@ class ProjectController {
     }
   }
 
+ 
+
+
   async getOne(req, res, next) {
     try {
       const id = req.params.id;
