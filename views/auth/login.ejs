@@ -6,12 +6,12 @@
           <i class="bi bi-shield-lock fs-1 text-primary"></i>
 
           <h5 class="mt-2 mb-0">
-            <%= mode === 'authority' ? 'Authority Login' : 'Welcome back' %>
+            <%= mode === 'authority' ? 'Welcome back Admin' : 'Welcome back' %>
           </h5>
 
           <div class="text-muted small">
             <%= mode === 'authority'
-                ? 'Super Admin / Admin / Manager Access Only'
+                ? 'Super Admin / Admin Only'
                 : 'Sign in to continue'
             %>
           </div>
@@ -42,7 +42,7 @@
           </div>
 
           <button class="btn btn-primary w-100">
-            <%= mode === 'authority' ? 'Login as Authority' : 'Login' %>
+            <%= mode === 'authority' ? 'Login' : 'Login' %>
           </button>
 
           <% if (!mode) { %>
@@ -52,9 +52,9 @@
 
             <!-- 👇 Authority Login Link (only shows on normal login page) -->
             <div class="text-center small mt-2">
-              <a href="/authority/login" class="text-primary fw-semibold">
+              <!-- <a href="/authority/login" class="text-primary fw-semibold">
                 Authority Login (Admin / Manager / Super Admin)
-              </a>
+              </a> -->
             </div>
           <% } %>
         </form>

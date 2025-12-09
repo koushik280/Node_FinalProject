@@ -305,7 +305,12 @@ router.get("/logout", async (req, res) => {
     path: "/",
   });
   res.clearCookie(REFRESH_COOKIE_NAME, rtCookieClearOptions);
-  return res.redirect("/");
+
+  const role=(res.locals.user?.role||"").toLowerCase()
+  if(role==="superadmin"||role==="admin"||role==="manager"){
+    return res.redirect("/authority/login")
+  }
+  return res.redirect("/login");
 });
 
 // --- Change password (web) ---
